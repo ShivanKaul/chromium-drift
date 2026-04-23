@@ -45,18 +45,14 @@ async function edge() {
 
 // --- Brave ---
 async function brave() {
-  const r = await f(
-    "https://api.github.com/repos/brave/brave-browser/releases?per_page=30",
-    { headers: { "User-Agent": "chromium-version-dashboard" } }
-  );
-  const rels = await r.json();
-  for (const rel of rels) {
-    if (rel.prerelease) continue;
-    if (/Nightly|Beta|Dev/i.test(rel.name || "")) continue;
-    const m = (rel.name || "").match(/Chromium\s+(\d+\.\d+\.\d+\.\d+)/);
-    if (m) return ok("Brave Release", m[1], parseInt(m[1], 10), "github.com/brave/brave-browser");
+  const r = await f("https://versions.brave.com/latest/brave-versions.json");
+  const data = await r.json();
+  for (const info of Object.values(data)) {
+    if (info.channel !== "release") continue;
+    const ver = info.dependencies?.chrome;
+    if (ver) return ok("Brave Release", ver, parseInt(ver, 10), "versions.brave.com");
   }
-  throw new Error("not found");
+  throw new Error("no release channel found");
 }
 
 // --- Vivaldi ---

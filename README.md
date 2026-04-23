@@ -9,7 +9,7 @@ Hosted on Cloudflare Pages.
 | Browser | Precision | Source |
 |---|---|---|
 | Chrome Stable (baseline) | Full version | ChromiumDash API |
-| Brave Release | Full version | GitHub Releases API |
+| Brave Release | Full version | versions.brave.com |
 | Vivaldi Release | Full version | Sparkle appcast + release notes |
 | Edge | Major only | Microsoft Edge Updates API |
 | Opera | Major only | FTP directory listing |
@@ -19,7 +19,7 @@ Hosted on Cloudflare Pages.
 
 **Chrome Stable**: Calls `chromiumdash.appspot.com/fetch_releases` for the latest Windows stable release. The JSON response includes the full version and milestone directly.
 
-**Brave Release**: Fetches the last 30 releases from `api.github.com/repos/brave/brave-browser/releases`. Skips prereleases and non-stable channels, then regex-extracts the Chromium version from the release name (e.g., "Release v1.89.143 (Chromium 147.0.7727.117)").
+**Brave Release**: Fetches `versions.brave.com/latest/brave-versions.json`, finds the first entry with `channel === "release"`, and reads `dependencies.chrome` for the Chromium version.
 
 **Vivaldi Release**: Two-step. First fetches the Sparkle appcast XML at `update.vivaldi.com` to get the release notes URL. Then fetches that HTML page and regex-matches the Chromium version string (e.g., "[Chromium] Updated to 146.0.7680.211").
 
