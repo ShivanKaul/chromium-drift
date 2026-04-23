@@ -187,8 +187,7 @@
       const chrome = data.find((b) => b.browser === "Chrome Stable");
       const base = chrome && chrome.chromiumMajor;
 
-      const sorted = ORDER.map((n) => data.find((b) => b.browser === n)).filter(Boolean);
-      for (const b of data) if (!sorted.includes(b)) sorted.push(b);
+      const sorted = data.slice().sort((a, b) => (b.chromiumMajor || 0) - (a.chromiumMajor || 0));
 
       const grid = document.createElement("div");
       grid.className = "grid";

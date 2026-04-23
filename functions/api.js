@@ -21,12 +21,29 @@ function ok(browser, chromiumVersion, chromiumMajor, source) {
 
 // --- Chrome ---
 async function chrome() {
+  // fetch_releases includes early stable rollouts, so we check the latest
+  // milestone's schedule to see if stable_date has passed. If not, we use
+  // the previous milestone.
   const r = await f(
-    "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Windows&num=1"
+    "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Windows&num=10"
   );
-  const d = await r.json();
-  if (!d.length) throw new Error("empty");
-  return ok("Chrome Stable", d[0].version, d[0].milestone, "chromiumdash.appspot.com");
+  const releases = await r.json();
+  if (!releases.length) throw new Error("empty");
+
+  const latest = releases[0];
+  const sched = await f(
+    "https://chromiumdash.appspot.com/fetch_milestone_schedule?mstone=" + latest.milestone
+  );
+  const data = await sched.json();
+  const stableDate = data.mstones?.[0]?.stable_date;
+
+  if (!stableDate || new Date(stableDate).getTime() <= Date.now()) {
+    return ok("Chrome Stable", latest.version, latest.milestone, "chromiumdash.appspot.com");
+  }
+  // Latest is still early stable; use previous milestone
+  const prev = releases.find((rel) => rel.milestone < latest.milestone);
+  if (prev) return ok("Chrome Stable", prev.version, prev.milestone, "chromiumdash.appspot.com");
+  return ok("Chrome Stable", latest.version, latest.milestone, "chromiumdash.appspot.com");
 }
 
 // --- Edge ---
