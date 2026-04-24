@@ -121,7 +121,7 @@ async function comet() {
   if (m) {
     const major = parseInt(m[1], 10);
     if (major >= 100 && major <= 250)
-      return ok("Comet Release", null, major, "source: uptodown.com download page");
+      return ok("Comet", null, major, "source: uptodown.com download page");
   }
   throw new Error("not found");
 }
@@ -133,7 +133,7 @@ const fetchers = [
   { name: "Brave Release", key: "brave", fn: brave },
   { name: "Vivaldi Release", key: "vivaldi", fn: vivaldi },
   { name: "Opera", key: "opera", fn: opera },
-  { name: "Comet Release", key: "comet", fn: comet },
+  { name: "Comet", key: "comet", fn: comet },
 ];
 
 function fromOverride(name, entry) {
