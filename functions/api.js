@@ -38,12 +38,12 @@ async function chrome() {
   const stableDate = data.mstones?.[0]?.stable_date;
 
   if (!stableDate || new Date(stableDate).getTime() <= Date.now()) {
-    return ok("Chrome Stable", latest.version, latest.milestone, "chromiumdash.appspot.com (Windows)");
+    return ok("Chrome Stable", latest.version, latest.milestone, "via public API (chromiumdash.appspot.com)");
   }
   // Latest is still early stable; use previous milestone
   const prev = releases.find((rel) => rel.milestone < latest.milestone);
-  if (prev) return ok("Chrome Stable", prev.version, prev.milestone, "chromiumdash.appspot.com (Windows)");
-  return ok("Chrome Stable", latest.version, latest.milestone, "chromiumdash.appspot.com (Windows)");
+  if (prev) return ok("Chrome Stable", prev.version, prev.milestone, "public API (chromiumdash.appspot.com)");
+  return ok("Chrome Stable", latest.version, latest.milestone, "via public API (chromiumdash.appspot.com)");
 }
 
 // --- Edge ---
@@ -57,7 +57,7 @@ async function edge() {
     s.Releases[0];
   if (!rel) throw new Error("no release");
   const major = parseInt(rel.ProductVersion, 10);
-  return ok("Edge", null, major, "edgeupdates.microsoft.com (Windows)");
+  return ok("Edge", null, major, "via public API (edgeupdates.microsoft.com)");
 }
 
 // --- Brave ---
@@ -67,7 +67,7 @@ async function brave() {
   for (const info of Object.values(data)) {
     if (info.channel !== "release") continue;
     const ver = info.dependencies?.chrome;
-    if (ver) return ok("Brave Release", ver, parseInt(ver, 10), "versions.brave.com");
+    if (ver) return ok("Brave Release", ver, parseInt(ver, 10), "via public API (versions.brave.com)");
   }
   throw new Error("no release channel found");
 }
@@ -81,22 +81,15 @@ async function vivaldi() {
   const nr = await f(nm[1].trim(), {}, 10000);
   const html = await nr.text();
   const cm = html.match(/Chromium[^\d]{0,60}(\d+\.\d+\.\d+\.\d+)/i);
-  if (cm) return ok("Vivaldi Release", cm[1], parseInt(cm[1], 10), "update.vivaldi.com (Windows)");
+  if (cm) return ok("Vivaldi Release", cm[1], parseInt(cm[1], 10), "release notes (update.vivaldi.com)");
   throw new Error("not found in notes");
 }
 
 // --- Opera ---
+// Opera has no reliable programmatic feed for its Chromium version.
+// Relies on manual override in manual-versions.json.
 async function opera() {
-  const r = await f("https://ftp.opera.com/pub/opera/desktop/");
-  const html = await r.text();
-  const re = /href="(\d+)\.\d+\.\d+\.\d+\/"/g;
-  let max = 0, m;
-  while ((m = re.exec(html)) !== null) {
-    const v = parseInt(m[1], 10);
-    if (v > max) max = v;
-  }
-  if (!max) throw new Error("no versions");
-  return ok("Opera", null, max + 16, "ftp.opera.com (major +16 offset)");
+  throw new Error("no automated source; needs manual override");
 }
 
 // --- Comet ---
@@ -112,23 +105,46 @@ async function comet() {
   if (m) {
     const major = parseInt(m[1], 10);
     if (major >= 100 && major <= 250)
-      return ok("Comet Release", null, major, "uptodown.com (Windows, version scheme)");
+      return ok("Comet Release", null, major, "uptodown.com");
   }
   throw new Error("not found");
 }
 
 // --- Handler ---
 const fetchers = [
-  { name: "Chrome Stable", fn: chrome },
-  { name: "Edge", fn: edge },
-  { name: "Brave Release", fn: brave },
-  { name: "Vivaldi Release", fn: vivaldi },
-  { name: "Opera", fn: opera },
-  { name: "Comet Release", fn: comet },
+  { name: "Chrome Stable", key: "chrome", fn: chrome },
+  { name: "Edge", key: "edge", fn: edge },
+  { name: "Brave Release", key: "brave", fn: brave },
+  { name: "Vivaldi Release", key: "vivaldi", fn: vivaldi },
+  { name: "Opera", key: "opera", fn: opera },
+  { name: "Comet Release", key: "comet", fn: comet },
 ];
 
-export async function onRequestGet() {
-  const results = await Promise.allSettled(fetchers.map((x) => x.fn()));
+function fromOverride(name, entry) {
+  return ok(
+    name,
+    entry.chromiumVersion || null,
+    entry.chromiumMajor,
+    "manual override" + (entry.lastUpdated ? " (" + entry.lastUpdated + ")" : "")
+  );
+}
+
+export async function onRequestGet(context) {
+  let overrides = {};
+  try {
+    const mr = await context.env.ASSETS.fetch(
+      new URL("/manual-versions.json", context.request.url)
+    );
+    if (mr.ok) overrides = await mr.json();
+  } catch (_) {}
+
+  const results = await Promise.allSettled(
+    fetchers.map((x) => {
+      const ov = overrides[x.key];
+      if (ov?.chromiumMajor) return Promise.resolve(fromOverride(x.name, ov));
+      return x.fn();
+    })
+  );
   const data = results.map((r, i) => {
     if (r.status === "fulfilled") return r.value;
     return {

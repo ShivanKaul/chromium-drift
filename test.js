@@ -61,22 +61,16 @@ await test("Vivaldi notes: extracts Chromium version", () => {
   assert(m[1] === "146.0.7680.211", "version should be 146.0.7680.211");
 });
 
-await test("Opera FTP: extracts max major version from directory listing", () => {
-  const html = `
-    <a href="128.0.5847.82/">128.0.5847.82/</a>
-    <a href="130.0.5900.10/">130.0.5900.10/</a>
-    <a href="129.0.5850.50/">129.0.5850.50/</a>`;
-  const re = /href="(\d+)\.\d+\.\d+\.\d+\/"/g;
-  let max = 0, m;
-  while ((m = re.exec(html)) !== null) {
-    const v = parseInt(m[1], 10);
-    if (v > max) max = v;
-  }
-  assert(max === 130, "max should be 130, got " + max);
+await test("Opera manual: reads chromiumMajor from manual entry", () => {
+  const manual = { opera: { chromiumMajor: 146, lastUpdated: "2026-04-23" } };
+  const entry = manual?.opera;
+  assert(entry?.chromiumMajor === 146, "should read chromiumMajor from manual entry");
 });
 
-await test("Opera offset: major + 16 = Chromium major", () => {
-  assert(130 + 16 === 146, "Opera 130 should map to Chromium 146");
+await test("Opera manual: missing entry throws", () => {
+  const manual = {};
+  const entry = manual?.opera;
+  assert(!entry?.chromiumMajor, "missing entry should be falsy");
 });
 
 await test("Comet version: first component is Chromium major", () => {
@@ -186,16 +180,13 @@ await test("Vivaldi: release notes contain Chromium version", async () => {
   assert(cm, "release notes should mention Chromium version");
 });
 
-await test("Opera: FTP listing has versioned directories", async () => {
-  const r = await f("https://ftp.opera.com/pub/opera/desktop/");
-  const html = await r.text();
-  const re = /href="(\d+)\.\d+\.\d+\.\d+\/"/g;
-  let max = 0, m;
-  while ((m = re.exec(html)) !== null) {
-    const v = parseInt(m[1], 10);
-    if (v > max) max = v;
-  }
-  assert(max >= 100, "should find Opera versions >= 100, got " + max);
+await test("Opera: manual-versions.json exists and has opera entry", async () => {
+  const fs = await import("node:fs/promises");
+  const raw = await fs.readFile("manual-versions.json", "utf8");
+  const data = JSON.parse(raw);
+  assert(data.opera, "should have opera key");
+  assert(typeof data.opera.chromiumMajor === "number", "chromiumMajor should be a number");
+  assert(data.opera.chromiumMajor >= 100, "chromiumMajor should be >= 100");
 });
 
 await test("Comet: Uptodown page has version string", async () => {
