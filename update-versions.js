@@ -18,6 +18,12 @@ const FETCH_TIMEOUT = 15_000;
 const DMG_TIMEOUT = 120_000;
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36";
 
+// Use 7zz (from 7zip package) if available, fall back to 7z (from p7zip-full).
+// Ubuntu 22.04+ ships 7zz which has better DMG/HFS+ support.
+let SZ;
+try { execSync("7zz --help", { stdio: "ignore" }); SZ = "7zz"; }
+catch { SZ = "7z"; }
+
 async function f(url, opts = {}, timeout = FETCH_TIMEOUT) {
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), timeout);
@@ -65,7 +71,7 @@ async function downloadDeb(url, label) {
 // BSD ar on macOS which can't handle some .deb formats).
 function extractDataTar(debPath, tmpDir) {
   const dataDir = join(tmpDir, "deb-data");
-  execSync(`7z x -o"${dataDir}" "${debPath}" -y 2>/dev/null`, {
+  execSync(`${SZ} x -o"${dataDir}" "${debPath}" -y 2>&1`, {
     timeout: 60_000,
   });
   // 7z auto-decompresses xz, so we get data.tar (not data.tar.xz)
@@ -87,7 +93,7 @@ function tarFlag(path) {
 // Extract Chrome/X.X.X.X from a binary inside a data.tar.
 function extractChromeVersionFromDeb(dataTarPath, binaryPath) {
   const cmd =
-    `tar ${tarFlag(dataTarPath)} "${dataTarPath}" --to-stdout "${binaryPath}" 2>/dev/null` +
+    `tar ${tarFlag(dataTarPath)} "${dataTarPath}" --to-stdout "${binaryPath}" 2>&1` +
     ` | strings` +
     ` | grep -oE 'Chrome/[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+'` +
     ` | sort -t/ -k2 -V` +
@@ -103,7 +109,7 @@ function extractChromeVersionFromDeb(dataTarPath, binaryPath) {
 // own version.
 function extractChromeVersionBroadSearch(dataTarPath, binaryPath) {
   const cmd =
-    `tar ${tarFlag(dataTarPath)} "${dataTarPath}" --to-stdout "${binaryPath}" 2>/dev/null` +
+    `tar ${tarFlag(dataTarPath)} "${dataTarPath}" --to-stdout "${binaryPath}" 2>&1` +
     ` | strings` +
     ` | grep -oE '\\b1[0-9]{2}\\.[0-9]+\\.[0-9]+\\.[0-9]+\\b'` +
     ` | sort -u`;
@@ -228,7 +234,7 @@ async function detectAtlas() {
     const extractDir = join(tmp, "extracted");
 
     // Step 1: extract the DMG (may produce an HFS image or files directly)
-    execSync(`7z x -o"${extractDir}" "${dmgPath}" -y 2>/dev/null`, {
+    execSync(`${SZ} x -o"${extractDir}" "${dmgPath}" -y 2>&1`, {
       timeout: 60_000,
     });
 
@@ -236,32 +242,32 @@ async function detectAtlas() {
     let plistContent;
     try {
       // Try to find the plist directly (if 7z extracted files)
-      const findCmd = `find "${extractDir}" -path "*/Support/ChatGPT Atlas.app/Contents/Info.plist" 2>/dev/null | head -1`;
+      const findCmd = `find "${extractDir}" -path "*/Support/ChatGPT Atlas.app/Contents/Info.plist" 2>&1 | head -1`;
       let plistPath = execSync(findCmd, { encoding: "utf8", timeout: 10_000 }).trim();
 
       if (!plistPath) {
         // Look for HFS image and extract from it
-        const hfsCmd = `find "${extractDir}" -name "*.hfs" -o -name "*.img" -o -name "disk image" 2>/dev/null | head -1`;
+        const hfsCmd = `find "${extractDir}" -name "*.hfs" -o -name "*.img" -o -name "disk image" 2>&1 | head -1`;
         const hfsPath = execSync(hfsCmd, { encoding: "utf8", timeout: 10_000 }).trim();
         if (hfsPath) {
           const hfsDir = join(tmp, "hfs");
-          execSync(`7z x -o"${hfsDir}" "${hfsPath}" -y 2>/dev/null`, {
+          execSync(`${SZ} x -o"${hfsDir}" "${hfsPath}" -y 2>&1`, {
             timeout: 60_000,
           });
-          const findCmd2 = `find "${hfsDir}" -path "*/Support/ChatGPT Atlas.app/Contents/Info.plist" 2>/dev/null | head -1`;
+          const findCmd2 = `find "${hfsDir}" -path "*/Support/ChatGPT Atlas.app/Contents/Info.plist" 2>&1 | head -1`;
           plistPath = execSync(findCmd2, { encoding: "utf8", timeout: 10_000 }).trim();
         }
 
         // Also try: 7z may extract a numbered file like "2.hfs" or similar
         if (!plistPath) {
-          const numberedCmd = `find "${extractDir}" -maxdepth 1 -type f -size +1M 2>/dev/null | head -1`;
+          const numberedCmd = `find "${extractDir}" -maxdepth 1 -type f -size +1M 2>&1 | head -1`;
           const numberedFile = execSync(numberedCmd, { encoding: "utf8", timeout: 10_000 }).trim();
           if (numberedFile) {
             const hfsDir = join(tmp, "hfs2");
-            execSync(`7z x -o"${hfsDir}" "${numberedFile}" -y 2>/dev/null`, {
+            execSync(`${SZ} x -o"${hfsDir}" "${numberedFile}" -y 2>&1`, {
               timeout: 60_000,
             });
-            const findCmd3 = `find "${hfsDir}" -path "*/Support/ChatGPT Atlas.app/Contents/Info.plist" 2>/dev/null | head -1`;
+            const findCmd3 = `find "${hfsDir}" -path "*/Support/ChatGPT Atlas.app/Contents/Info.plist" 2>&1 | head -1`;
             plistPath = execSync(findCmd3, { encoding: "utf8", timeout: 10_000 }).trim();
           }
         }
@@ -306,6 +312,7 @@ const data = JSON.parse(readFileSync(jsonPath, "utf8"));
 const today = new Date().toISOString().slice(0, 10);
 
 let changed = false;
+let failures = 0;
 
 for (const { key, name, detect, source } of browsers) {
   try {
@@ -330,6 +337,7 @@ for (const { key, name, detect, source } of browsers) {
     );
   } catch (e) {
     console.error("[" + name + "] FAILED: " + e.message + "\n");
+    failures++;
   }
 }
 
@@ -338,4 +346,9 @@ if (changed) {
   console.log("Updated ci-versions.json");
 } else {
   console.log("No changes to ci-versions.json");
+}
+
+if (failures) {
+  console.error(failures + " browser(s) failed");
+  process.exit(1);
 }

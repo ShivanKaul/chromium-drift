@@ -18,8 +18,8 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install p7zip (for Atlas DMG extraction)
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq p7zip-full
+      - name: Install 7zip (for .deb and Atlas DMG extraction)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq 7zip
 
       - name: Detect versions and update ci-versions.json
         run: node update-versions.js

@@ -18,33 +18,31 @@ Hosted on Cloudflare Pages.
 
 ### How each version is fetched
 
-#### Live fetchers (run at request time in the Cloudflare Pages Function)
+#### Live fetchers 
 
-**Chrome Stable**: Calls `chromiumdash.appspot.com/fetch_releases` for the latest macOS stable release. The JSON response includes the full version and milestone directly.
+Chromium versions for these browsers are fetched live on page load.
 
-**Brave Release**: Fetches `versions.brave.com/latest/brave-versions.json`, finds the first entry with `channel === "release"`, and reads `dependencies.chrome` for the Chromium version.
+- **Chrome Stable**: Calls `chromiumdash.appspot.com/fetch_releases` for the latest macOS stable release. The JSON response includes the full version and milestone directly.
 
-**Edge**: Calls `edgeupdates.microsoft.com/api/products`, filters for the "Stable" product and a macOS release.
+- **Brave Release**: Fetches `versions.brave.com/latest/brave-versions.json`, finds the first entry with `channel === "release"`, and reads `dependencies.chrome` for the Chromium version.
 
-**Perplexity Comet**: Fetches Uptodown's download page for Comet. Comet's version string uses the Chromium major as its first component (e.g., `145.2.7632.5936` = Chromium 145). No first-party API exists.
+- **Edge**: Calls `edgeupdates.microsoft.com/api/products`, filters for the "Stable" product and a macOS release.
 
-#### CI-detected versions (run daily via GitHub Actions, results stored in `ci-versions.json`):
+- **Perplexity Comet**: Scrapes Uptodown's download page for Comet. Comet's version string uses the Chromium major as its first component (e.g., `145.2.7632.5936` = Chromium 145). No first-party API exists.
 
-**Vivaldi Release**: Downloads the Vivaldi Linux .deb package, extracts the `vivaldi-bin` binary, and uses `strings` to find the embedded Chromium version. Vivaldi overrides the `Chrome/` UA string with its own version, so a broad search filters for Chromium-plausible version patterns (major >= 100, third component > 1000).
+#### CI-detected versions 
 
-**Opera**: Downloads the Opera Linux .deb package, extracts the `opera` binary, and uses `strings` to find the embedded `Chrome/X.X.X.X` UA string.
+Chromium versions for these are extracted from local binaries. The CI is run daily via GitHub Actions, results stored in `ci-versions.json`:
 
-**ChatGPT Atlas**: Fetches the Sparkle appcast to find the latest DMG URL, downloads the DMG, extracts the inner Chromium app's `Info.plist` using 7z, and reads `CFBundleShortVersionString`. ChatGPT Atlas is macOS-only, so the plist extraction runs on Linux CI without needing a macOS runner.
+- **Vivaldi Release**: Downloads the Vivaldi Linux .deb package, extracts the `vivaldi-bin` binary, and uses `strings` to find the embedded Chromium version. Vivaldi overrides the `Chrome/` UA string with its own version, so a broad search filters for Chromium-plausible version patterns (major >= 100, third component > 1000).
+
+- **Opera**: Downloads the Opera Linux .deb package, extracts the `opera` binary, and uses `strings` to find the embedded `Chrome/X.X.X.X` UA string.
+
+- **ChatGPT Atlas**: Fetches the Sparkle appcast to find the latest DMG URL, downloads the DMG, extracts the inner Chromium app's `Info.plist` using 7z, and reads `CFBundleShortVersionString`.
 
 ## How it works
 
 `index.html` is a static page that calls `/api` on load. `/api` is a Cloudflare Pages Function (`functions/api.js`) that returns version data as NDJSON. Chrome, Edge, Brave, and Comet are fetched live from public APIs. Vivaldi, Opera, and ChatGPT Atlas are read from `ci-versions.json`, which is updated daily by GitHub Actions. Manual overrides in `manual-versions.json` take priority over both.
-
-### Version data priority
-
-For live-fetched browsers (Chrome, Edge, Brave): manual override > live API fetcher.
-
-For CI-detected browsers (Vivaldi, Opera, Comet, ChatGPT Atlas): manual override > CI version.
 
 ### CI automation
 
