@@ -4,7 +4,6 @@
 // Browsers handled:
 //   Opera    -- download .deb, run strings on binary
 //   Vivaldi  -- download .deb, run strings on binary
-//   Comet    -- scrape uptodown.com (no .deb available)
 //   Atlas    -- download macOS DMG via Sparkle appcast, extract plist
 //
 // Requires: Node 20+, p7zip-full (for .deb and Atlas DMG extraction)
@@ -196,20 +195,6 @@ async function detectVivaldi() {
   }
 }
 
-async function detectComet() {
-  console.log("[Comet] Fetching uptodown page...");
-  const r = await f("https://comet-browser.en.uptodown.com/windows/download", {
-    headers: { "User-Agent": UA },
-  });
-  const html = await r.text();
-  const m = html.match(/(\d{3,})\.\d+\.\d+\.\d+/);
-  if (!m) throw new Error("Version not found on uptodown page");
-  const major = parseInt(m[1], 10);
-  if (major < 100 || major > 250) throw new Error("Implausible major: " + major);
-  console.log("  Found: major " + major);
-  return { chromiumVersion: null, chromiumMajor: major };
-}
-
 async function detectAtlas() {
   console.log("[Atlas] Fetching Sparkle appcast...");
   const r = await f(
@@ -311,19 +296,18 @@ async function detectAtlas() {
 // ---------------------------------------------------------------------------
 
 const browsers = [
-  { key: "opera", name: "Opera", detect: detectOpera },
-  { key: "vivaldi", name: "Vivaldi", detect: detectVivaldi },
-  { key: "comet", name: "Comet", detect: detectComet },
-  { key: "atlas", name: "Atlas", detect: detectAtlas },
+  { key: "opera", name: "Opera", detect: detectOpera, source: "extracted from Linux .deb binary" },
+  { key: "vivaldi", name: "Vivaldi", detect: detectVivaldi, source: "extracted from Linux .deb binary" },
+  { key: "atlas", name: "Atlas", detect: detectAtlas, source: "extracted from macOS DMG plist" },
 ];
 
-const jsonPath = new URL("./manual-versions.json", import.meta.url).pathname;
+const jsonPath = new URL("./ci-versions.json", import.meta.url).pathname;
 const data = JSON.parse(readFileSync(jsonPath, "utf8"));
 const today = new Date().toISOString().slice(0, 10);
 
 let changed = false;
 
-for (const { key, name, detect } of browsers) {
+for (const { key, name, detect, source } of browsers) {
   try {
     const result = await detect();
     const prev = data[key] || {};
@@ -334,7 +318,7 @@ for (const { key, name, detect } of browsers) {
       console.log("[" + name + "] No change (Chromium " + result.chromiumMajor + ")\n");
       continue;
     }
-    const entry = { chromiumMajor: result.chromiumMajor, lastUpdated: today };
+    const entry = { chromiumMajor: result.chromiumMajor, lastUpdated: today, source };
     if (result.chromiumVersion) entry.chromiumVersion = result.chromiumVersion;
     data[key] = entry;
     changed = true;
@@ -351,7 +335,7 @@ for (const { key, name, detect } of browsers) {
 
 if (changed) {
   writeFileSync(jsonPath, JSON.stringify(data, null, 2) + "\n");
-  console.log("Updated manual-versions.json");
+  console.log("Updated ci-versions.json");
 } else {
-  console.log("No changes to manual-versions.json");
+  console.log("No changes to ci-versions.json");
 }

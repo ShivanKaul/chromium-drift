@@ -96,6 +96,114 @@ await test("Comet version: rejects non-Chromium-range numbers", () => {
   assert(!(major >= 100 && major <= 250), "50 should be rejected");
 });
 
+await test("parseDebFilename: extracts filename from Packages index", () => {
+  const text = [
+    "Package: foo-browser",
+    "Version: 1.0",
+    "Filename: pool/main/foo-browser_1.0_amd64.deb",
+    "",
+    "Package: opera-stable",
+    "Version: 130.0.5847.92",
+    "Filename: pool/non-free/o/opera-stable/opera-stable_130.0.5847.92_amd64.deb",
+    "",
+  ].join("\n");
+  const blocks = text.split("\n\n");
+  let best = null;
+  for (const block of blocks) {
+    const pkg = block.match(/^Package:\s*(.+)$/m)?.[1];
+    if (pkg !== "opera-stable") continue;
+    const filename = block.match(/^Filename:\s*(.+)$/m)?.[1];
+    if (filename) best = filename;
+  }
+  assert(best === "pool/non-free/o/opera-stable/opera-stable_130.0.5847.92_amd64.deb", "should find opera filename");
+});
+
+await test("parseDebFilename: picks last entry when multiple versions exist", () => {
+  const text = [
+    "Package: vivaldi-stable",
+    "Version: 7.9.3970.55-1",
+    "Filename: pool/main/vivaldi-stable_7.9.3970.55-1_amd64.deb",
+    "",
+    "Package: vivaldi-stable",
+    "Version: 7.9.3970.59-1",
+    "Filename: pool/main/vivaldi-stable_7.9.3970.59-1_amd64.deb",
+    "",
+  ].join("\n");
+  const blocks = text.split("\n\n");
+  let best = null;
+  for (const block of blocks) {
+    const pkg = block.match(/^Package:\s*(.+)$/m)?.[1];
+    if (pkg !== "vivaldi-stable") continue;
+    const filename = block.match(/^Filename:\s*(.+)$/m)?.[1];
+    if (filename) best = filename;
+  }
+  assert(best === "pool/main/vivaldi-stable_7.9.3970.59-1_amd64.deb", "should pick the latest version");
+});
+
+await test("Chromium version broad search: filters by third component > 1000", () => {
+  const candidates = [
+    "109.236.119.2",   // IP address
+    "127.0.0.1",       // localhost
+    "146.0.7680.211",  // Chromium version
+    "146.0.3856.109",  // Vivaldi internal version
+    "185.228.168.10",  // IP address
+  ].filter((v) => {
+    const parts = v.split(".");
+    return parts.length === 4 && parseInt(parts[2], 10) > 1000;
+  });
+  assert(candidates.length === 2, "should find 2 candidates (7680 and 3856)");
+  assert(candidates.includes("146.0.7680.211"), "should include Chromium version");
+});
+
+await test("Atlas plist parsing: extracts CFBundleShortVersionString", () => {
+  const plist = `<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0"><dict>
+  <key>CFBundleName</key><string>Atlas</string>
+  <key>CFBundleShortVersionString</key>
+  <string>147.0.7727.24</string>
+  <key>CFBundleSignature</key><string>CGPT</string>
+</dict></plist>`;
+  const m = plist.match(/<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/);
+  assert(m, "regex should match");
+  assert(m[1].trim() === "147.0.7727.24", "should extract version");
+});
+
+await test("Atlas Sparkle appcast: extracts DMG URL from highest build", () => {
+  const xml = `<rss><channel>
+    <item><sparkle:version>20260101000000000</sparkle:version>
+      <enclosure url="https://example.com/old.dmg"/></item>
+    <item><sparkle:version>20260416164957000</sparkle:version>
+      <enclosure url="https://example.com/latest.dmg"/></item>
+    <item><sparkle:version>20260201000000000</sparkle:version>
+      <enclosure url="https://example.com/mid.dmg"/></item>
+  </channel></rss>`;
+  const items = [...xml.matchAll(
+    /<item>[\s\S]*?<sparkle:version>(\d+)<\/sparkle:version>[\s\S]*?url="([^"]+\.dmg)"[\s\S]*?<\/item>/g
+  )];
+  assert(items.length === 3, "should find 3 items");
+  items.sort((a, b) => Number(b[1]) - Number(a[1]));
+  assert(items[0][2] === "https://example.com/latest.dmg", "should pick highest build");
+});
+
+await test("CI/manual override priority: manual overrides CI", () => {
+  const overrides = { opera: { chromiumMajor: 999, lastUpdated: "2026-01-01" } };
+  const ciVersions = { opera: { chromiumMajor: 146, lastUpdated: "2026-04-24", source: "extracted from Linux .deb binary" } };
+  const ov = overrides["opera"];
+  const ci = ciVersions["opera"];
+  // manual override should win
+  const result = ov?.chromiumMajor ? "manual" : ci?.chromiumMajor ? "ci" : "none";
+  assert(result === "manual", "manual override should take priority");
+});
+
+await test("CI/manual override priority: CI used when no manual override", () => {
+  const overrides = { opera: {} };
+  const ciVersions = { opera: { chromiumMajor: 146, lastUpdated: "2026-04-24", source: "extracted from Linux .deb binary" } };
+  const ov = overrides["opera"];
+  const ci = ciVersions["opera"];
+  const result = ov?.chromiumMajor ? "manual" : ci?.chromiumMajor ? "ci" : "none";
+  assert(result === "ci", "CI version should be used when no manual override");
+});
+
 await test("Chrome schedule: early stable filtered correctly", () => {
   const futureDate = "2099-01-01T00:00:00";
   const pastDate = "2020-01-01T00:00:00";
@@ -232,6 +340,39 @@ await test("Comet: Uptodown page has version string", async () => {
   assert(m, "page should contain a version string");
   const major = parseInt(m[1], 10);
   assert(major >= 100 && major <= 250, "major should be in Chromium range, got " + major);
+});
+
+await test("Opera: .deb Packages index has opera-stable entry", async () => {
+  const r = await f(
+    "https://deb.opera.com/opera-stable/dists/stable/non-free/binary-amd64/Packages"
+  );
+  const text = await r.text();
+  assert(text.includes("Package: opera-stable"), "should contain opera-stable package");
+  const m = text.match(/Filename:\s*(pool\/non-free\/o\/opera-stable\/[^\n]+\.deb)/);
+  assert(m, "should have a .deb filename");
+});
+
+await test("Vivaldi: .deb Packages index has vivaldi-stable entry", async () => {
+  const r = await f(
+    "https://repo.vivaldi.com/archive/deb/dists/stable/main/binary-amd64/Packages"
+  );
+  const text = await r.text();
+  assert(text.includes("Package: vivaldi-stable"), "should contain vivaldi-stable package");
+  const m = text.match(/Filename:\s*(pool\/main\/[^\n]+\.deb)/);
+  assert(m, "should have a .deb filename");
+});
+
+await test("Atlas: Sparkle appcast has DMG enclosure", async () => {
+  const r = await f(
+    "https://persistent.oaistatic.com/atlas/public/sparkle_public_appcast.xml"
+  );
+  const xml = await r.text();
+  const items = [...xml.matchAll(
+    /<item>[\s\S]*?<sparkle:version>(\d+)<\/sparkle:version>[\s\S]*?url="([^"]+\.dmg)"[\s\S]*?<\/item>/g
+  )];
+  assert(items.length > 0, "should have at least one item with a DMG URL");
+  items.sort((a, b) => Number(b[1]) - Number(a[1]));
+  assert(items[0][2].startsWith("https://"), "DMG URL should be HTTPS");
 });
 
 // ---------------------------------------------------------------------------

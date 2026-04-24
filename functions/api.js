@@ -72,42 +72,6 @@ async function brave() {
   throw new Error("no release channel found");
 }
 
-// --- Vivaldi ---
-async function vivaldi() {
-  const r = await f("https://update.vivaldi.com/update/1.0/public/appcast.x64.xml");
-  const xml = await r.text();
-  const nm = xml.match(/<sparkle:releaseNotesLink>([^<]+)<\/sparkle:releaseNotesLink>/i);
-  if (!nm) throw new Error("no notes link");
-  const nr = await f(nm[1].trim(), {}, 10000);
-  const html = await nr.text();
-  const cm = html.match(/Chromium[^\d]{0,60}(\d+\.\d+\.\d+\.\d+)/i);
-  if (cm) return ok("Vivaldi Release", cm[1], parseInt(cm[1], 10), "source: scraped release notes (vivaldi.com)");
-  throw new Error("not found in notes");
-}
-
-// --- Opera ---
-async function opera() {
-  const ua = { headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36" } };
-  const r = await f("https://blogs.opera.com/desktop/", ua);
-  const html = await r.text();
-  // Find the latest major stable release post (e.g., /opera-130-stable/ or /opera-123/)
-  const links = [...html.matchAll(/href="(https:\/\/blogs\.opera\.com\/desktop\/\d{4}\/\d{2}\/opera-(\d+)(?:-stable)?\/?)"/g)];
-  if (!links.length) throw new Error("no stable post found");
-  // Pick the highest Opera major version
-  let best = links[0];
-  for (const m of links) {
-    if (parseInt(m[2], 10) > parseInt(best[2], 10)) best = m;
-  }
-  const pr = await f(best[1], ua, 10000);
-  const page = await pr.text();
-  const cm = page.match(/Chromium[^\d]{0,80}(\d+\.\d+\.\d+\.\d+)/i);
-  if (cm) return ok("Opera", cm[1], parseInt(cm[1], 10), "source: scraped blog posts (blogs.opera.com)");
-  // Fallback: major-only match (e.g., "Chromium 113")
-  const mm = page.match(/Chromium[^\d]{0,80}(\d{3,})/i);
-  if (mm) return ok("Opera", null, parseInt(mm[1], 10), "source: scraped blog posts (blogs.opera.com)");
-  throw new Error("Chromium version not found in post");
-}
-
 // --- Comet ---
 async function comet() {
   const r = await f("https://comet-browser.en.uptodown.com/windows/download", {
@@ -127,31 +91,46 @@ async function comet() {
 }
 
 // --- Handler ---
+
+// Browsers with live API fetchers (run at request time)
 const fetchers = [
   { name: "Chrome Stable", key: "chrome", fn: chrome },
   { name: "Edge", key: "edge", fn: edge },
   { name: "Brave Release", key: "brave", fn: brave },
-  { name: "Vivaldi Release", key: "vivaldi", fn: vivaldi },
-  { name: "Opera", key: "opera", fn: opera },
   { name: "Comet", key: "comet", fn: comet },
 ];
 
-function fromOverride(name, entry) {
+// Browsers whose versions come from CI (extracted from binaries daily).
+// Manual overrides in manual-versions.json take priority over CI values.
+const ciBrowsers = [
+  { name: "Vivaldi Release", key: "vivaldi" },
+  { name: "Opera", key: "opera" },
+  { name: "Atlas", key: "atlas" },
+];
+
+function fromEntry(name, entry, sourcePrefix) {
   return ok(
     name,
     entry.chromiumVersion || null,
     entry.chromiumMajor,
-    "source: manual override" + (entry.lastUpdated ? " (" + entry.lastUpdated + ")" : "")
+    "source: " + sourcePrefix + (entry.lastUpdated ? " (" + entry.lastUpdated + ")" : "")
   );
 }
 
 export async function onRequestGet(context) {
   let overrides = {};
+  let ciVersions = {};
   try {
     const mr = await context.env.ASSETS.fetch(
       new URL("/manual-versions.json", context.request.url)
     );
     if (mr.ok) overrides = await mr.json();
+  } catch (_) {}
+  try {
+    const cr = await context.env.ASSETS.fetch(
+      new URL("/ci-versions.json", context.request.url)
+    );
+    if (cr.ok) ciVersions = await cr.json();
   } catch (_) {}
 
   const encoder = new TextEncoder();
@@ -159,10 +138,12 @@ export async function onRequestGet(context) {
   const writer = writable.getWriter();
 
   const fetchedAt = Date.now();
-  const promises = fetchers.map((x) => {
+
+  // Live-fetched browsers (manual override takes priority)
+  const livePromises = fetchers.map((x) => {
     const ov = overrides[x.key];
     const p = ov?.chromiumMajor
-      ? Promise.resolve(fromOverride(x.name, ov))
+      ? Promise.resolve(fromEntry(x.name, ov, "manual override"))
       : x.fn();
     return p.then(
       (result) => writer.write(encoder.encode(JSON.stringify(result) + "\n")),
@@ -181,7 +162,28 @@ export async function onRequestGet(context) {
     );
   });
 
-  Promise.all(promises)
+  // CI-detected browsers (manual override > CI version)
+  const ciPromises = ciBrowsers.map((x) => {
+    const ov = overrides[x.key];
+    const ci = ciVersions[x.key];
+    let result;
+    if (ov?.chromiumMajor) {
+      result = fromEntry(x.name, ov, "manual override");
+    } else if (ci?.chromiumMajor) {
+      result = fromEntry(x.name, ci, ci.source || "CI");
+    } else {
+      result = {
+        browser: x.name,
+        chromiumVersion: null,
+        chromiumMajor: null,
+        source: null,
+        error: "no version data available",
+      };
+    }
+    return writer.write(encoder.encode(JSON.stringify(result) + "\n"));
+  });
+
+  Promise.all([...livePromises, ...ciPromises])
     .then(() =>
       writer.write(
         encoder.encode(JSON.stringify({ fetchedAt }) + "\n")

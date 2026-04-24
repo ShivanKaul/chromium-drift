@@ -1,9 +1,11 @@
-// Validates manual-versions.json schema.
+// Validates a versions JSON file (manual-versions.json or ci-versions.json).
 // Each key must be either an empty object or have both chromiumMajor (number) and lastUpdated (string).
+// Usage: node validate-manual-versions.js [file]
 
 import { readFile } from "node:fs/promises";
 
-const raw = await readFile("manual-versions.json", "utf8");
+const file = process.argv[2] || "manual-versions.json";
+const raw = await readFile(file, "utf8");
 const data = JSON.parse(raw);
 let errors = 0;
 
@@ -27,8 +29,8 @@ for (const [key, entry] of Object.entries(data)) {
 }
 
 if (errors) {
-  console.error("\n" + errors + " invalid entry/entries in manual-versions.json");
+  console.error("\n" + errors + " invalid entry/entries in " + file);
   process.exit(1);
 } else {
-  console.log("\nmanual-versions.json is valid");
+  console.log("\n" + file + " is valid");
 }
