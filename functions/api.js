@@ -154,27 +154,45 @@ export async function onRequestGet(context) {
     if (mr.ok) overrides = await mr.json();
   } catch (_) {}
 
-  const results = await Promise.allSettled(
-    fetchers.map((x) => {
-      const ov = overrides[x.key];
-      if (ov?.chromiumMajor) return Promise.resolve(fromOverride(x.name, ov));
-      return x.fn();
-    })
-  );
-  const data = results.map((r, i) => {
-    if (r.status === "fulfilled") return r.value;
-    return {
-      browser: fetchers[i].name,
-      chromiumVersion: null,
-      chromiumMajor: null,
-      source: null,
-      error: r.reason?.message || "Unknown error",
-    };
+  const encoder = new TextEncoder();
+  const { readable, writable } = new TransformStream();
+  const writer = writable.getWriter();
+
+  const fetchedAt = Date.now();
+  const promises = fetchers.map((x) => {
+    const ov = overrides[x.key];
+    const p = ov?.chromiumMajor
+      ? Promise.resolve(fromOverride(x.name, ov))
+      : x.fn();
+    return p.then(
+      (result) => writer.write(encoder.encode(JSON.stringify(result) + "\n")),
+      (err) =>
+        writer.write(
+          encoder.encode(
+            JSON.stringify({
+              browser: x.name,
+              chromiumVersion: null,
+              chromiumMajor: null,
+              source: null,
+              error: err?.message || "Unknown error",
+            }) + "\n"
+          )
+        )
+    );
   });
-  return new Response(JSON.stringify({ data, fetchedAt: Date.now() }), {
+
+  Promise.all(promises)
+    .then(() =>
+      writer.write(
+        encoder.encode(JSON.stringify({ fetchedAt }) + "\n")
+      )
+    )
+    .finally(() => writer.close());
+
+  return new Response(readable, {
     headers: {
-      "Content-Type": "application/json",
-      "Cache-Control": "public, s-maxage=1800, max-age=300",
+      "Content-Type": "application/x-ndjson",
+      "Cache-Control": "public, max-age=60",
       "Access-Control-Allow-Origin": "*",
     },
   });

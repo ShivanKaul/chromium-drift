@@ -130,6 +130,16 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    .skeleton {
+      background: linear-gradient(90deg, var(--border) 25%, var(--bg) 50%, var(--border) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 4px;
+      color: transparent !important;
+      user-select: none;
+    }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+
     @media (max-width: 600px) {
       header, .toolbar, main { padding-left: 16px; padding-right: 16px; }
       .grid { grid-template-columns: 1fr; }
@@ -149,10 +159,7 @@
 
   <main>
     <div id="content">
-      <div class="loading-state">
-        <div class="spinner"></div>
-        <div>Fetching browser versions...</div>
-      </div>
+      <div id="grid" class="grid"></div>
     </div>
   </main>
 
@@ -161,6 +168,9 @@
       "Chrome Stable", "Brave Release", "Vivaldi Release",
       "Comet", "Opera", "Edge",
     ];
+
+    // State shared across card updates
+    let chromeMajor = null;
 
     function esc(s) {
       const d = document.createElement("div");
@@ -182,55 +192,130 @@
       return d + " major version" + (d > 1 ? "s" : "") + " behind";
     }
 
-    function render(payload) {
-      const { data, fetchedAt } = payload;
-      const chrome = data.find((b) => b.browser === "Chrome Stable");
-      const base = chrome && chrome.chromiumMajor;
+    // Render one card's inner HTML from a result object
+    function cardHTML(e) {
+      const ref = e.browser === "Chrome Stable";
+      const err = !!e.error;
+      const delta = chromeMajor != null && e.chromiumMajor != null ? chromeMajor - e.chromiumMajor : null;
 
-      const sorted = data.slice().sort((a, b) => (b.chromiumMajor || 0) - (a.chromiumMajor || 0));
+      if (err) {
+        return '<div class="browser-name">' + esc(e.browser) + '</div>' +
+          '<div class="cr-major">Unavailable</div>' +
+          '<div class="cr-full">' + esc(e.error) + '</div>' +
+          '<span class="delta ' + dCls(null) + '">' + dLabel(null) + '</span>';
+      }
+      return '<div class="browser-name">' + esc(e.browser) +
+          (ref ? ' <span class="ref-badge">baseline</span>' : '') + '</div>' +
+        '<div class="cr-major">' + (e.chromiumMajor || "?") + '</div>' +
+        '<div class="cr-full">' +
+          (e.chromiumVersion ? esc(e.chromiumVersion) : "major version only") + '</div>' +
+        '<span class="delta ' + dCls(delta) + '">' + dLabel(delta, ref) + '</span>' +
+        '<div class="source">' + esc(e.source) + '</div>';
+    }
 
-      const grid = document.createElement("div");
-      grid.className = "grid";
-
-      for (const e of sorted) {
-        const ref = e.browser === "Chrome Stable";
-        const err = !!e.error;
-        const delta = base != null && e.chromiumMajor != null ? base - e.chromiumMajor : null;
-
+    // Build the grid with skeleton cards for every browser in ORDER
+    function renderSkeletons() {
+      const grid = document.getElementById("grid");
+      grid.innerHTML = "";
+      for (const name of ORDER) {
         const c = document.createElement("div");
-        c.className = "card" + (ref ? " reference" : "") + (err ? " error-card" : "");
+        c.className = "card";
+        c.dataset.browser = name;
+        const ref = name === "Chrome Stable";
+        if (ref) c.classList.add("reference");
+        c.innerHTML =
+          '<div class="browser-name">' + esc(name) +
+            (ref ? ' <span class="ref-badge">baseline</span>' : '') + '</div>' +
+          '<div class="cr-major skeleton">&nbsp;&nbsp;&nbsp;&nbsp;</div>' +
+          '<div class="cr-full skeleton">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>' +
+          '<span class="delta delta-unknown skeleton">loading</span>';
+        grid.appendChild(c);
+      }
+    }
 
-        c.innerHTML = err
-          ? '<div class="browser-name">' + esc(e.browser) + '</div>' +
-            '<div class="cr-major">Unavailable</div>' +
-            '<div class="cr-full">' + esc(e.error) + '</div>' +
-            '<span class="delta ' + dCls(null) + '">' + dLabel(null) + '</span>'
-          : '<div class="browser-name">' + esc(e.browser) +
-              (ref ? ' <span class="ref-badge">baseline</span>' : '') + '</div>' +
-            '<div class="cr-major">' + (e.chromiumMajor || "?") + '</div>' +
-            '<div class="cr-full">' +
-              (e.chromiumVersion ? esc(e.chromiumVersion) : "major version only") + '</div>' +
-            '<span class="delta ' + dCls(delta) + '">' + dLabel(delta, ref) + '</span>' +
-            '<div class="source">' + esc(e.source) + '</div>';
+    // Update a single card when its data arrives
+    function updateCard(e) {
+      if (e.browser === "Chrome Stable" && e.chromiumMajor != null) {
+        chromeMajor = e.chromiumMajor;
+        // Recalculate delta badges on cards already rendered
+        const grid = document.getElementById("grid");
+        for (const c of grid.querySelectorAll(".card[data-loaded]")) {
+          const browser = c.dataset.browser;
+          const major = parseInt(c.dataset.chromiumMajor, 10);
+          if (!isNaN(major)) {
+            const delta = chromeMajor - major;
+            const span = c.querySelector(".delta");
+            if (span) {
+              span.className = "delta " + dCls(delta);
+              span.textContent = dLabel(delta, browser === "Chrome Stable");
+            }
+          }
+        }
+      }
 
+      const ref = e.browser === "Chrome Stable";
+      const err = !!e.error;
+
+      // Find the existing skeleton card or fall back to appending
+      const grid = document.getElementById("grid");
+      let c = grid.querySelector('[data-browser="' + CSS.escape(e.browser) + '"]');
+      if (!c) {
+        c = document.createElement("div");
+        c.dataset.browser = e.browser;
         grid.appendChild(c);
       }
 
-      const el = document.getElementById("content");
-      el.innerHTML = "";
-      el.appendChild(grid);
-      document.getElementById("status").textContent =
-        "Last fetched: " + new Date(fetchedAt).toLocaleString();
+      c.className = "card" + (ref ? " reference" : "") + (err ? " error-card" : "");
+      c.dataset.loaded = "1";
+      c.dataset.chromiumMajor = e.chromiumMajor != null ? e.chromiumMajor : "";
+      c.innerHTML = cardHTML(e);
     }
 
     async function load(bust) {
       const btn = document.getElementById("refresh-btn");
       btn.disabled = true;
+      chromeMajor = null;
+      renderSkeletons();
+      document.getElementById("status").textContent = "Loading…";
+
       try {
         const url = "./api" + (bust ? "?t=" + Date.now() : "");
         const r = await fetch(url);
         if (!r.ok) throw new Error("API returned " + r.status);
-        render(await r.json());
+
+        const reader = r.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buf += decoder.decode(value, { stream: true });
+          const lines = buf.split("\n");
+          buf = lines.pop(); // keep any incomplete trailing line
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            const obj = JSON.parse(line);
+            if ("fetchedAt" in obj) {
+              document.getElementById("status").textContent =
+                "Last fetched: " + new Date(obj.fetchedAt).toLocaleString();
+            } else {
+              updateCard(obj);
+            }
+          }
+        }
+        // Flush any remaining bytes in the TextDecoder
+        buf += decoder.decode();
+        // Flush any remaining buffered content
+        if (buf.trim()) {
+          const obj = JSON.parse(buf);
+          if ("fetchedAt" in obj) {
+            document.getElementById("status").textContent =
+              "Last fetched: " + new Date(obj.fetchedAt).toLocaleString();
+          } else {
+            updateCard(obj);
+          }
+        }
       } catch (err) {
         document.getElementById("status").textContent = "Error: " + err.message;
       } finally {
