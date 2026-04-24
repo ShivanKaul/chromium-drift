@@ -18,7 +18,7 @@ Hosted on Cloudflare Pages.
 
 ### How each version is fetched
 
-**Live fetchers** (run at request time in the Cloudflare Pages Function):
+#### Live fetchers (run at request time in the Cloudflare Pages Function)
 
 **Chrome Stable**: Calls `chromiumdash.appspot.com/fetch_releases` for the latest macOS stable release. The JSON response includes the full version and milestone directly.
 
@@ -28,7 +28,7 @@ Hosted on Cloudflare Pages.
 
 **Perplexity Comet**: Fetches Uptodown's download page for Comet. Comet's version string uses the Chromium major as its first component (e.g., `145.2.7632.5936` = Chromium 145). No first-party API exists.
 
-**CI-detected versions** (run daily via GitHub Actions, results stored in `ci-versions.json`):
+#### CI-detected versions (run daily via GitHub Actions, results stored in `ci-versions.json`):
 
 **Vivaldi Release**: Downloads the Vivaldi Linux .deb package, extracts the `vivaldi-bin` binary, and uses `strings` to find the embedded Chromium version. Vivaldi overrides the `Chrome/` UA string with its own version, so a broad search filters for Chromium-plausible version patterns (major >= 100, third component > 1000).
 
