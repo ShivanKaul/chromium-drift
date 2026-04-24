@@ -12,7 +12,7 @@ Hosted on Cloudflare Pages.
 | Brave Release | Full version | versions.brave.com |
 | Vivaldi Release | Full version | Sparkle appcast + release notes |
 | Edge | Major only | Microsoft Edge Updates API |
-| Opera | Major only | FTP directory listing |
+| Opera | Major only | Manual override (`manual-versions.json`) |
 | Perplexity Comet | Major only | Uptodown.com version string |
 
 ### How each version is fetched
@@ -25,7 +25,7 @@ Hosted on Cloudflare Pages.
 
 **Edge**: Calls `edgeupdates.microsoft.com/api/products`, filters for the "Stable" product and a Windows x64 release. Edge and Chromium share the same major version number, so the Edge version major is the Chromium major. Full Chromium build numbers differ, so only the major is reported.
 
-**Opera**: Fetches the directory listing at `ftp.opera.com/pub/opera/desktop/`, finds the highest Opera major version from folder names, then adds 16 to estimate the Chromium major. This offset has historically been stable but could drift if Opera skips a release cycle.
+**Opera**: No reliable programmatic source exists, so Opera relies on a manual override in `manual-versions.json`.
 
 **Perplexity Comet**: Fetches Uptodown's download page for Comet. Comet's version string uses the Chromium major as its first component (e.g., `145.2.7632.5936` = Chromium 145). No first-party API exists.
 
