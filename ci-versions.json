@@ -1,5 +1,15 @@
 {
-  "opera": {},
-  "vivaldi": {},
+  "opera": {
+    "chromiumMajor": 146,
+    "lastUpdated": "2026-04-24",
+    "source": "extracted from Linux .deb binary",
+    "chromiumVersion": "146.0.7680.201"
+  },
+  "vivaldi": {
+    "chromiumMajor": 146,
+    "lastUpdated": "2026-04-24",
+    "source": "extracted from Linux .deb binary",
+    "chromiumVersion": "146.0.7680.211"
+  },
   "atlas": {}
 }
