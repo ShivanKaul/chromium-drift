@@ -61,16 +61,27 @@ await test("Vivaldi notes: extracts Chromium version", () => {
   assert(m[1] === "146.0.7680.211", "version should be 146.0.7680.211");
 });
 
-await test("Opera manual: reads chromiumMajor from manual entry", () => {
-  const manual = { opera: { chromiumMajor: 146, lastUpdated: "2026-04-23" } };
-  const entry = manual?.opera;
-  assert(entry?.chromiumMajor === 146, "should read chromiumMajor from manual entry");
+await test("Opera blog: extracts stable post URL from listing", () => {
+  const html = '<a href="https://blogs.opera.com/desktop/2026/04/opera-130-stable/">Opera 130 Stable</a>';
+  const links = [...html.matchAll(/href="(https:\/\/blogs\.opera\.com\/desktop\/\d{4}\/\d{2}\/opera-(\d+)(?:-stable)?\/?)"/g)];
+  assert(links.length === 1, "should find one link");
+  assert(links[0][2] === "130", "should extract Opera major 130");
 });
 
-await test("Opera manual: missing entry throws", () => {
-  const manual = {};
-  const entry = manual?.opera;
-  assert(!entry?.chromiumMajor, "missing entry should be falsy");
+await test("Opera blog: extracts Chromium full version from post", () => {
+  const html = 'Opera 130 is based on the Chromium version: <strong>146.0.7680.178</strong>';
+  const cm = html.match(/Chromium[^\d]{0,80}(\d+\.\d+\.\d+\.\d+)/i);
+  assert(cm, "regex should match");
+  assert(cm[1] === "146.0.7680.178", "version should be 146.0.7680.178");
+});
+
+await test("Opera blog: extracts Chromium major-only version", () => {
+  const html = 'Opera 99 is based on Chromium 113.';
+  const cm = html.match(/Chromium[^\d]{0,80}(\d+\.\d+\.\d+\.\d+)/i);
+  assert(!cm, "full version regex should not match");
+  const mm = html.match(/Chromium[^\d]{0,80}(\d+)/i);
+  assert(mm, "major-only regex should match");
+  assert(mm[1] === "113", "major should be 113");
 });
 
 await test("Comet version: first component is Chromium major", () => {
@@ -180,13 +191,33 @@ await test("Vivaldi: release notes contain Chromium version", async () => {
   assert(cm, "release notes should mention Chromium version");
 });
 
-await test("Opera: manual-versions.json exists and has opera entry", async () => {
-  const fs = await import("node:fs/promises");
-  const raw = await fs.readFile("manual-versions.json", "utf8");
-  const data = JSON.parse(raw);
-  assert(data.opera, "should have opera key");
-  assert(typeof data.opera.chromiumMajor === "number", "chromiumMajor should be a number");
-  assert(data.opera.chromiumMajor >= 100, "chromiumMajor should be >= 100");
+await test("Opera: blog listing has a stable release post", async () => {
+  const r = await f("https://blogs.opera.com/desktop/");
+  const html = await r.text();
+  const links = [...html.matchAll(/href="(https:\/\/blogs\.opera\.com\/desktop\/\d{4}\/\d{2}\/opera-(\d+)(?:-stable)?\/?)"/g)];
+  assert(links.length > 0, "should find at least one stable release post");
+  let best = links[0];
+  for (const m of links) {
+    if (parseInt(m[2], 10) > parseInt(best[2], 10)) best = m;
+  }
+  const major = parseInt(best[2], 10);
+  assert(major >= 100, "Opera major should be >= 100, got " + major);
+});
+
+await test("Opera: stable post contains Chromium version", async () => {
+  const r = await f("https://blogs.opera.com/desktop/");
+  const html = await r.text();
+  const links = [...html.matchAll(/href="(https:\/\/blogs\.opera\.com\/desktop\/\d{4}\/\d{2}\/opera-(\d+)(?:-stable)?\/?)"/g)];
+  let best = links[0];
+  for (const m of links) {
+    if (parseInt(m[2], 10) > parseInt(best[2], 10)) best = m;
+  }
+  const pr = await f(best[1]);
+  const page = await pr.text();
+  const cm = page.match(/Chromium[^\d]{0,80}(\d+\.\d+\.\d+\.\d+)/i);
+  assert(cm, "stable post should mention full Chromium version");
+  const crMajor = parseInt(cm[1], 10);
+  assert(crMajor >= 100 && crMajor <= 250, "Chromium major should be in range, got " + crMajor);
 });
 
 await test("Comet: Uptodown page has version string", async () => {

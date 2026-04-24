@@ -86,10 +86,26 @@ async function vivaldi() {
 }
 
 // --- Opera ---
-// Opera has no reliable programmatic feed for its Chromium version.
-// Relies on manual override in manual-versions.json.
 async function opera() {
-  throw new Error("no automated source; needs manual override");
+  const ua = { headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36" } };
+  const r = await f("https://blogs.opera.com/desktop/", ua);
+  const html = await r.text();
+  // Find the latest major stable release post (e.g., /opera-130-stable/ or /opera-123/)
+  const links = [...html.matchAll(/href="(https:\/\/blogs\.opera\.com\/desktop\/\d{4}\/\d{2}\/opera-(\d+)(?:-stable)?\/?)"/g)];
+  if (!links.length) throw new Error("no stable post found");
+  // Pick the highest Opera major version
+  let best = links[0];
+  for (const m of links) {
+    if (parseInt(m[2], 10) > parseInt(best[2], 10)) best = m;
+  }
+  const pr = await f(best[1], ua, 10000);
+  const page = await pr.text();
+  const cm = page.match(/Chromium[^\d]{0,80}(\d+\.\d+\.\d+\.\d+)/i);
+  if (cm) return ok("Opera", cm[1], parseInt(cm[1], 10), "blog (blogs.opera.com/desktop)");
+  // Fallback: major-only match (e.g., "Chromium 113")
+  const mm = page.match(/Chromium[^\d]{0,80}(\d{3,})/i);
+  if (mm) return ok("Opera", null, parseInt(mm[1], 10), "blog (blogs.opera.com/desktop)");
+  throw new Error("Chromium version not found in post");
 }
 
 // --- Comet ---
