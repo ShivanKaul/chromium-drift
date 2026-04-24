@@ -1,8 +1,8 @@
 # Chromium Version Dashboard
 
-What Chromium version is each Chromium-based browser on?
+What Chromium version is each major browser on?
 
-https://chromium-version-dashboard.pages.dev/
+https://chromium-version-dashboard.pages.dev
 
 ## Tracked browsers
 
