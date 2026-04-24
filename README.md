@@ -1,6 +1,6 @@
 # Chromium Version Dashboard
 
-What Chromium version is each major browser on?
+Which Chromium version is each major browser on?
 
 https://chromium-version-dashboard.pages.dev
 
