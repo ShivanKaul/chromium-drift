@@ -114,7 +114,7 @@ console.log("\nIntegration tests (hitting real APIs)\n");
 
 await test("Chrome: ChromiumDash returns valid release", async () => {
   const r = await f(
-    "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Windows&num=1"
+    "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Mac&num=1"
   );
   const data = await r.json();
   assert(data.length > 0, "should return at least one release");
@@ -138,9 +138,9 @@ await test("Edge: returns Stable product with releases", async () => {
   assert(stable, "should have Stable product");
   assert(stable.Releases.length > 0, "should have releases");
   const rel = stable.Releases.find(
-    (r) => r.Platform === "Windows" && r.Architecture === "x64"
+    (r) => r.Platform === "MacOS"
   );
-  assert(rel, "should have Windows x64 release");
+  assert(rel, "should have MacOS release");
   const major = parseInt(rel.ProductVersion, 10);
   assert(major >= 100 && major <= 250, "major should be in Chromium range");
 });

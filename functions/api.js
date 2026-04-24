@@ -25,7 +25,7 @@ async function chrome() {
   // milestone's schedule to see if stable_date has passed. If not, we use
   // the previous milestone.
   const r = await f(
-    "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Windows&num=10"
+    "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Mac&num=10"
   );
   const releases = await r.json();
   if (!releases.length) throw new Error("empty");
@@ -53,11 +53,11 @@ async function edge() {
   const s = d.find((p) => p.Product === "Stable");
   if (!s) throw new Error("no Stable");
   const rel =
-    s.Releases.find((r) => r.Platform === "Windows" && r.Architecture === "x64") ||
+    s.Releases.find((r) => r.Platform === "MacOS") ||
     s.Releases[0];
   if (!rel) throw new Error("no release");
   const major = parseInt(rel.ProductVersion, 10);
-  return ok("Edge", null, major, "via public API (edgeupdates.microsoft.com)");
+  return ok("Edge", rel.ProductVersion, major, "via public API (edgeupdates.microsoft.com)");
 }
 
 // --- Brave ---
