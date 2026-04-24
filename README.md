@@ -1,8 +1,8 @@
 # Chromium Version Dashboard
 
-A dashboard that shows which Chromium version each major browser is currently shipping. Chrome Stable is used as the baseline; other browsers are color-coded by how many major versions behind they are. >=1 version behind lists up as a warning.
+What Chromium version is each Chromium-based browser on?
 
-Hosted on Cloudflare Pages.
+https://chromium-version-dashboard.pages.dev/
 
 ## Tracked browsers
 
@@ -20,7 +20,7 @@ Hosted on Cloudflare Pages.
 
 #### Live fetchers 
 
-Chromium versions for these browsers are fetched live on page load.
+Chromium versions for these browsers are fetched live on page load:
 
 - **Chrome Stable**: Calls `chromiumdash.appspot.com/fetch_releases` for the latest macOS stable release. The JSON response includes the full version and milestone directly.
 
@@ -34,7 +34,7 @@ Chromium versions for these browsers are fetched live on page load.
 
 Chromium versions for these are extracted from local binaries. The CI is run daily via GitHub Actions, results stored in `ci-versions.json`:
 
-- **Vivaldi Release**: Downloads the Vivaldi Linux .deb package, extracts the `vivaldi-bin` binary, and uses `strings` to find the embedded Chromium version. Vivaldi overrides the `Chrome/` UA string with its own version, so a broad search filters for Chromium-plausible version patterns (major >= 100, third component > 1000).
+- **Vivaldi Release**: Downloads the Vivaldi Linux .deb package, extracts the `vivaldi-bin` binary, and uses `strings` to find the embedded Chromium version. 
 
 - **Opera**: Downloads the Opera Linux .deb package, extracts the `opera` binary, and uses `strings` to find the embedded `Chrome/X.X.X.X` UA string.
 
@@ -46,10 +46,12 @@ Chromium versions for these are extracted from local binaries. The CI is run dai
 
 ### CI automation
 
-A GitHub Actions workflow (`.github/workflows/update-versions.yml`) runs daily at 08:00 UTC. It downloads browser binaries, extracts the Chromium version using `strings` (for .deb packages) or plist extraction (for Atlas DMG), writes the results to `ci-versions.json`, and commits if anything changed. Can also be triggered manually via `workflow_dispatch`.
+A GitHub Actions workflow (`.github/workflows/update-versions.yml`) runs daily. It downloads browser binaries, extracts the Chromium version using `strings` (for .deb packages) or plist extraction (for Atlas DMG), writes the results to `ci-versions.json`, and commits if anything changed. Can also be triggered manually via `workflow_dispatch`.
 
 ## Local development
 
+I'm hosting the website on Cloudflare Pages.
+
 ```bash
-npx wrangler pages dev .
+./dev.sh
 ```
