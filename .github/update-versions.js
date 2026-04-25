@@ -399,7 +399,7 @@ const browsers = [
   { key: "dia", name: "Dia", detect: detectDia, source: "extracted from macOS ZIP binary" },
 ];
 
-const jsonPath = new URL("./ci-versions.json", import.meta.url).pathname;
+const jsonPath = new URL("../ci-versions.json", import.meta.url).pathname;
 const data = JSON.parse(readFileSync(jsonPath, "utf8"));
 const today = new Date().toISOString().slice(0, 10);
 

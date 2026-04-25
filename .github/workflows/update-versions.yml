@@ -22,10 +22,10 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq 7zip
 
       - name: Detect versions and update ci-versions.json
-        run: node update-versions.js
+        run: node .github/update-versions.js
 
       - name: Validate ci-versions.json
-        run: node validate-manual-versions.js ci-versions.json
+        run: node test/validate-manual-versions.js ci-versions.json
 
       - name: Commit and push if changed
         run: |

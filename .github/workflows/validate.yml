@@ -15,6 +15,6 @@ jobs:
         with:
           node-version: 20
       - name: Validate manual-versions.json
-        run: node validate-manual-versions.js
+        run: node test/validate-manual-versions.js
       - name: Run tests
-        run: node test.js
+        run: node test/test.js
