@@ -222,7 +222,7 @@
           (ref ? ' <span class="ref-badge">baseline</span>' : '') + '</div>' +
         '<div class="cr-major">' + (e.chromiumMajor || "?") + '</div>' +
         '<div class="cr-full">' +
-          (e.chromiumVersion ? esc(e.chromiumVersion) : "major version only") + '</div>' +
+          (e.chromiumVersion ? esc(e.chromiumVersion) : "") + '</div>' +
         '<span class="delta ' + dCls(delta) + '">' + dLabel(delta, ref) + '</span>' +
         '<div class="source">' + esc(e.source) + '</div>';
     }
