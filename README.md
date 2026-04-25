@@ -6,17 +6,15 @@ https://chromium-version-dashboard.pages.dev
 
 ## Tracked browsers
 
-| Browser |
-|---|
-| Chrome Stable (baseline) |
-| Brave Release |
-| Edge |
-| Vivaldi Release |
-| Opera |
-| ChatGPT Atlas |
-| Perplexity Comet |
-| Arc |
-| Dia |
+1. Chrome Stable (baseline)
+2. Brave Release
+3. Edge
+4. Vivaldi Release
+5. Opera
+6. ChatGPT Atlas
+7. Perplexity Comet
+8. Arc
+9. Dia
 
 ## Docs
 
