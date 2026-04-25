@@ -4,6 +4,9 @@ Which Chromium version is each major browser on?
 
 https://chromium-version-dashboard.pages.dev
 
+<img width="889" height="748" alt="chromium-dashboard-screenshot" src="https://github.com/user-attachments/assets/2d44fbb0-21cd-494b-b989-88dea066a8ff" />
+
+
 ## Tracked browsers
 
 1. Chrome Stable (baseline)
