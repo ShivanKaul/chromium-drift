@@ -6,17 +6,17 @@ https://chromium-version-dashboard.pages.dev
 
 ## Tracked browsers
 
-| Browser | Precision |
-|---|---|
-| Chrome Stable (baseline) | Full version |
-| Brave Release | Full version |
-| Edge | Full version |
-| Vivaldi Release | Full version |
-| Opera | Full version |
-| ChatGPT Atlas | Full version |
-| Perplexity Comet | Major only |
-| Arc | Full version |
-| Dia | Full version |
+| Browser |
+|---|
+| Chrome Stable (baseline) |
+| Brave Release |
+| Edge |
+| Vivaldi Release |
+| Opera |
+| ChatGPT Atlas |
+| Perplexity Comet |
+| Arc |
+| Dia |
 
 ## Docs
 
