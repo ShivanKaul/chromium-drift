@@ -10,7 +10,7 @@
 // Requires: Node 20+, p7zip-full (for .deb and Atlas DMG extraction)
 // Usage:    node update-versions.js
 
-import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -84,6 +84,16 @@ function extractDataTar(debPath, tmpDir) {
     // Fallback: maybe 7z kept it as data.tar.xz
     return join(dataDir, "data.tar.xz");
   }
+}
+
+// Compare two dotted version strings (e.g., "147.0.7727.117" > "146.0.7680.201").
+function versionCompare(a, b) {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  for (let i = 0; i < 4; i++) {
+    if (pa[i] !== pb[i]) return pa[i] - pb[i];
+  }
+  return 0;
 }
 
 // Tar flag: -J for .xz, nothing for plain .tar
@@ -338,54 +348,35 @@ async function detectDia() {
       timeout: 120_000,
     });
 
-    // Find the main binary in the app bundle
-    let binaryPath;
-    for (const name of ["Dia", "BoostBrowser"]) {
-      const findCmd = `find "${extractDir}" -path "*/Contents/MacOS/${name}" -type f 2>&1 | head -1`;
-      binaryPath = execSync(findCmd, { encoding: "utf8", timeout: 10_000 }).trim();
-      if (binaryPath) break;
-    }
-    if (!binaryPath) {
-      const fallbackCmd = `find "${extractDir}" -path "*/Contents/MacOS/*" -type f 2>&1 | head -1`;
-      binaryPath = execSync(fallbackCmd, { encoding: "utf8", timeout: 10_000 }).trim();
-    }
-    if (!binaryPath) throw new Error("Binary not found in ZIP");
-    console.log("  Binary: " + binaryPath.split("/").slice(-3).join("/"));
+    // The real Chrome version is in a framework binary, not the main
+    // executable (which contains stale Chrome/ strings). Dia uses
+    // ArcCore.framework. Check each .framework for Chrome/ strings and
+    // pick the highest valid Chromium version (third component > 1000).
+    const fwDir = join(extractDir, "Dia.app", "Contents", "Frameworks");
+    const fwEntries = readdirSync(fwDir).filter(e => e.endsWith(".framework"));
+    if (!fwEntries.length) throw new Error("No frameworks found in app bundle");
 
-    // Extract Chrome/X.X.X.X from the binary using strings
-    const cmd =
-      `strings "${binaryPath}"` +
-      ` | grep -oE 'Chrome/[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+'` +
-      ` | sort -t/ -k2 -V` +
-      ` | tail -1` +
-      ` | sed 's/Chrome\\///'`;
-    let ver = execSync(cmd, { encoding: "utf8", timeout: 60_000 }).trim();
-
-    // Fallback: broad search for Chromium-like version strings (major >= 100,
-    // third component > 1000) in case Chrome/ token is overridden
-    if (!ver) {
-      console.log("  Chrome/ not found, trying broad search...");
-      const broadCmd =
+    let ver;
+    for (const fw of fwEntries) {
+      const fwName = fw.replace(".framework", "");
+      const binaryPath = join(fwDir, fw, fwName);
+      try { readFileSync(binaryPath, { flag: "r" }); } catch { continue; }
+      console.log("  Checking: " + fw);
+      const cmd =
         `strings "${binaryPath}"` +
-        ` | grep -oE '\\b1[0-9]{2}\\.[0-9]+\\.[0-9]+\\.[0-9]+\\b'` +
+        ` | grep -oE 'Chrome/[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+'` +
+        ` | sed 's/Chrome\\///'` +
         ` | sort -u`;
-      const out = execSync(broadCmd, { encoding: "utf8", timeout: 60_000 }).trim();
-      if (out) {
-        const candidates = out.split("\n").filter((v) => {
-          const parts = v.split(".");
-          return parts.length === 4 && parseInt(parts[2], 10) > 1000;
-        });
-        if (candidates.length) {
-          candidates.sort((a, b) => {
-            const pa = a.split(".").map(Number);
-            const pb = b.split(".").map(Number);
-            for (let i = 0; i < 4; i++) {
-              if (pa[i] !== pb[i]) return pa[i] - pb[i];
-            }
-            return 0;
-          });
-          ver = candidates[candidates.length - 1];
-        }
+      const out = execSync(cmd, { encoding: "utf8", timeout: 60_000 }).trim();
+      if (!out) continue;
+      const candidates = out.split("\n").filter((v) => {
+        const parts = v.split(".");
+        return parts.length === 4 &&
+          parseInt(parts[0], 10) >= 100 &&
+          parseInt(parts[2], 10) > 1000;
+      });
+      for (const c of candidates) {
+        if (!ver || versionCompare(c, ver) > 0) ver = c;
       }
     }
 

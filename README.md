@@ -6,17 +6,17 @@ https://chromium-version-dashboard.pages.dev
 
 ## Tracked browsers
 
-| Browser | Precision | Source |
-|---|---|---|
-| Chrome Stable (baseline) | Full version | ChromiumDash API (live) |
-| Brave Release | Full version | versions.brave.com (live) |
-| Edge | Full version | Microsoft Edge Updates API (live) |
-| Vivaldi Release | Full version | Linux .deb binary via CI |
-| Opera | Full version | Linux .deb binary via CI |
-| ChatGPT Atlas | Full version | macOS DMG plist via CI |
-| Perplexity Comet | Major only | uptodown.com (live) |
-| Arc | Full version | Sparkle appcast (live) |
-| Dia | Full version | macOS ZIP binary via CI |
+| Browser | Precision |
+|---|---|
+| Chrome Stable (baseline) | Full version |
+| Brave Release | Full version |
+| Edge | Full version |
+| Vivaldi Release | Full version |
+| Opera | Full version |
+| ChatGPT Atlas | Full version |
+| Perplexity Comet | Major only |
+| Arc | Full version |
+| Dia | Full version |
 
 ## Docs
 
