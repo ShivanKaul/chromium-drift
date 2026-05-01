@@ -224,7 +224,7 @@
         '<div class="cr-full">' +
           (e.chromiumVersion ? esc(e.chromiumVersion) : "") + '</div>' +
         '<span class="delta ' + dCls(delta) + '">' + dLabel(delta, ref) + '</span>' +
-        '<div class="source">' + esc(e.source) + '</div>';
+        '<div class="source">' + (e.sourceUrl && /^https?:\/\//.test(e.sourceUrl) ? '<a href="' + esc(e.sourceUrl) + '" target="_blank" rel="noopener" style="color:inherit">' + esc(e.source) + '</a>' : esc(e.source)) + '</div>';
     }
 
     // Build the grid with skeleton cards for every browser in ORDER
