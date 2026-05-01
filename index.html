@@ -4,137 +4,205 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chromium Drift</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
   <style>
     :root {
       color-scheme: light dark;
-      --bg: #f3f4f6;
+      --bg: #f5f6f8;
       --surface: #ffffff;
-      --text: #111827;
-      --text-muted: #6b7280;
-      --border: #e5e7eb;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
       --accent: #2563eb;
-      --green: #15803d;
-      --green-bg: #bbf7d0;
-      --yellow: #a16207;
-      --yellow-bg: #fde68a;
-      --orange: #c2410c;
-      --orange-bg: #fdba74;
-      --red: #b91c1c;
-      --red-bg: #fca5a5;
-      --gray: #6b7280;
-      --gray-bg: #f9fafb;
+      --green: #16a34a;
+      --green-bg: #dcfce7;
+      --yellow: #ca8a04;
+      --yellow-bg: #fef9c3;
+      --orange: #ea580c;
+      --orange-bg: #ffedd5;
+      --red: #dc2626;
+      --red-bg: #fee2e2;
+      --gray: #94a3b8;
+      --gray-bg: #f1f5f9;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
     }
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #111827;
-        --surface: #1f2937;
-        --text: #f3f4f6;
-        --text-muted: #9ca3af;
-        --border: #374151;
-        --green-bg: #065f46;
-        --yellow-bg: #92400e;
-        --orange-bg: #9a3412;
-        --red-bg: #991b1b;
-        --gray-bg: #1f2937;
+        --bg: #0c1222;
+        --surface: #1a2332;
+        --text: #e2e8f0;
+        --text-muted: #94a3b8;
+        --border: #2a3a4e;
+        --green-bg: #052e16;
+        --yellow-bg: #422006;
+        --orange-bg: #431407;
+        --red-bg: #450a0a;
+        --gray-bg: #1e293b;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+        --shadow-md: 0 4px 12px rgba(0,0,0,0.3);
       }
       .delta-0, .delta-1, .delta-2, .delta-3 {
-        background: rgba(0,0,0,0.3);
+        background: rgba(0,0,0,0.35);
       }
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: var(--font-sans);
       background: var(--bg);
       color: var(--text);
       min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 32px;
     }
 
     header {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      padding: 24px 32px;
+      padding: 32px 0;
+      box-shadow: var(--shadow-sm);
     }
-    header h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
-    header .subtitle { color: var(--text-muted); font-size: 14px; }
+    header h1 {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+    }
+    header .subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    header .subtitle a { color: var(--accent); text-decoration: none; }
+    header .subtitle a:hover { text-decoration: underline; }
 
     .toolbar {
       display: flex;
       align-items: center;
       gap: 16px;
-      padding: 16px 32px;
+      padding: 20px 0;
       flex-wrap: wrap;
     }
-    .toolbar .meta { color: var(--text-muted); font-size: 13px; }
+    .toolbar .meta {
+      color: var(--text-muted);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+    }
     .toolbar button {
       background: var(--accent);
       color: #fff;
       border: none;
-      padding: 8px 18px;
-      border-radius: 6px;
+      padding: 8px 20px;
+      border-radius: 8px;
+      font-family: var(--font-sans);
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      transition: opacity 0.15s;
+      transition: background 0.15s, transform 0.1s;
+      box-shadow: 0 1px 3px rgba(37,99,235,0.3);
     }
-    .toolbar button:hover { opacity: 0.85; }
-    .toolbar button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .toolbar button:hover { background: #1d4ed8; }
+    .toolbar button:active { transform: scale(0.97); }
+    .toolbar button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-    main { padding: 0 32px 48px; }
+    main { padding: 0 0 64px; }
 
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+      gap: 18px;
     }
 
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 20px;
-      transition: box-shadow 0.15s, background 0.2s, border-color 0.2s;
+      border-radius: 12px;
+      padding: 22px 24px;
+      transition: box-shadow 0.2s, background 0.2s, border-color 0.2s, transform 0.15s;
+      box-shadow: var(--shadow-sm);
     }
-    .card:hover { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06); }
+    .card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-1px);
+    }
     .card.reference { border-color: var(--accent); border-width: 2px; }
     .card.card-green { background: var(--green-bg); border-color: var(--green); }
     .card.card-yellow { background: var(--yellow-bg); border-color: var(--yellow); }
     .card.card-orange { background: var(--orange-bg); border-color: var(--orange); }
     .card.card-red { background: var(--red-bg); border-color: var(--red); }
     .card .browser-name {
-      font-size: 15px; font-weight: 600; margin-bottom: 12px;
-      display: flex; align-items: center; gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: var(--text-muted);
     }
     .card .browser-name .ref-badge {
-      font-size: 10px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 0.5px; background: var(--accent); color: #fff;
-      padding: 2px 7px; border-radius: 4px;
+      font-size: 9px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.6px; background: var(--accent); color: #fff;
+      padding: 2px 8px; border-radius: 4px;
     }
-    .card .cr-major { font-size: 40px; font-weight: 800; line-height: 1; margin-bottom: 6px; }
-    .card .cr-full { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; min-height: 18px; }
+    .card .cr-major {
+      font-family: var(--font-mono);
+      font-size: 48px;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 6px;
+      letter-spacing: -1px;
+    }
+    .card .cr-full {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      min-height: 18px;
+      letter-spacing: -0.3px;
+    }
     .card .delta {
       display: inline-block; font-size: 12px; font-weight: 600;
-      padding: 3px 10px; border-radius: 20px;
+      padding: 4px 12px; border-radius: 20px;
     }
     .delta-0 { background: rgba(255,255,255,0.6); color: var(--green); }
     .delta-1 { background: rgba(255,255,255,0.6); color: var(--yellow); }
     .delta-2 { background: rgba(255,255,255,0.6); color: var(--orange); }
     .delta-3 { background: rgba(255,255,255,0.6); color: var(--red); }
     .delta-unknown { background: var(--gray-bg); color: var(--gray); }
-    .card .source { margin-top: 12px; font-size: 11px; color: var(--text-muted); }
-    .card.error-card .cr-major { font-size: 16px; font-weight: 500; color: var(--red); }
+    .card .source { margin-top: 14px; font-size: 11px; color: var(--text-muted); }
+    .card.error-card .cr-major {
+      font-family: var(--font-sans);
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--red);
+      letter-spacing: 0;
+    }
 
     .why-section {
       margin: 0 0 28px;
       padding: 20px 24px;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: 12px;
       font-size: 14px;
-      line-height: 1.6;
+      line-height: 1.7;
       color: var(--text);
+      box-shadow: var(--shadow-sm);
     }
     .why-section summary {
       font-weight: 600;
@@ -172,30 +240,35 @@
       background: linear-gradient(90deg, var(--border) 25%, var(--bg) 50%, var(--border) 75%);
       background-size: 200% 100%;
       animation: shimmer 1.4s infinite;
-      border-radius: 4px;
+      border-radius: 6px;
       color: transparent !important;
       user-select: none;
     }
     @keyframes shimmer { to { background-position: -200% 0; } }
 
     @media (max-width: 600px) {
-      header, .toolbar, main { padding-left: 16px; padding-right: 16px; }
+      .container { padding: 0 16px; }
+      header { padding: 24px 0; }
+      header h1 { font-size: 24px; }
       .grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>Chromium Drift</h1>
-    <div class="subtitle">How far behind is each major Chromium browser? (<a href="https://github.com/ShivanKaul/chromium-drift" style="color: var(--accent)">GitHub repo</a>)</div>
+    <div class="container">
+      <h1>Chromium Drift</h1>
+      <div class="subtitle">How far behind is each major Chromium browser? <a href="https://github.com/ShivanKaul/chromium-drift">GitHub repo</a></div>
+    </div>
   </header>
 
-  <div class="toolbar">
-    <button id="refresh-btn" onclick="refresh()">Refresh</button>
-    <span class="meta" id="status">Loading...</span>
-  </div>
+  <div class="container">
+    <div class="toolbar">
+      <button id="refresh-btn" onclick="refresh()">Refresh</button>
+      <span class="meta" id="status">Loading...</span>
+    </div>
 
-  <main>
+    <main>
     <details class="why-section">
       <summary>Why does Chromium version lag matter?</summary>
       <div class="why-body">
@@ -207,7 +280,8 @@
     <div id="content">
       <div id="grid" class="grid"></div>
     </div>
-  </main>
+    </main>
+  </div>
 
   <script>
     const ORDER = [
