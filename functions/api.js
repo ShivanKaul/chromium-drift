@@ -15,8 +15,8 @@ async function f(url, opts = {}, timeout = FETCH_TIMEOUT) {
   }
 }
 
-function ok(browser, chromiumVersion, chromiumMajor, source) {
-  return { browser, chromiumVersion, chromiumMajor, source, error: null };
+function ok(browser, chromiumVersion, chromiumMajor, source, sourceUrl = null) {
+  return { browser, chromiumVersion, chromiumMajor, source, sourceUrl, error: null };
 }
 
 // --- Chrome ---
@@ -38,12 +38,12 @@ async function chrome() {
   const stableDate = data.mstones?.[0]?.stable_date;
 
   if (!stableDate || new Date(stableDate).getTime() <= Date.now()) {
-    return ok("Chrome Stable", latest.version, latest.milestone, "source: public API (chromiumdash.appspot.com, macOS)");
+    return ok("Chrome Stable", latest.version, latest.milestone, "source: public API (chromiumdash.appspot.com, macOS)", "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Mac&num=10");
   }
   // Latest is still early stable; use previous milestone
   const prev = releases.find((rel) => rel.milestone < latest.milestone);
-  if (prev) return ok("Chrome Stable", prev.version, prev.milestone, "source: public API (chromiumdash.appspot.com, macOS)");
-  return ok("Chrome Stable", latest.version, latest.milestone, "source: public API (chromiumdash.appspot.com, macOS)");
+  if (prev) return ok("Chrome Stable", prev.version, prev.milestone, "source: public API (chromiumdash.appspot.com, macOS)", "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Mac&num=10");
+  return ok("Chrome Stable", latest.version, latest.milestone, "source: public API (chromiumdash.appspot.com, macOS)", "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Mac&num=10");
 }
 
 // --- Edge ---
@@ -57,7 +57,7 @@ async function edge() {
     s.Releases[0];
   if (!rel) throw new Error("no release");
   const major = parseInt(rel.ProductVersion, 10);
-  return ok("Edge Stable", rel.ProductVersion, major, "source: public API (edgeupdates.microsoft.com, macOS)");
+  return ok("Edge Stable", rel.ProductVersion, major, "source: public API (edgeupdates.microsoft.com, macOS)", "https://edgeupdates.microsoft.com/api/products");
 }
 
 // --- Brave ---
@@ -67,7 +67,7 @@ async function brave() {
   for (const info of Object.values(data)) {
     if (info.channel !== "release") continue;
     const ver = info.dependencies?.chrome;
-    if (ver) return ok("Brave Release", ver, parseInt(ver, 10), "source: public API (versions.brave.com)");
+    if (ver) return ok("Brave Release", ver, parseInt(ver, 10), "source: public API (versions.brave.com)", "https://versions.brave.com/latest/brave-versions.json");
   }
   throw new Error("no release channel found");
 }
@@ -85,7 +85,7 @@ async function comet() {
   if (m) {
     const major = parseInt(m[1], 10);
     if (major >= 100 && major <= 250)
-      return ok("Comet", null, major, "source: uptodown.com download page");
+      return ok("Comet", null, major, "source: uptodown.com download page", "https://comet-browser.en.uptodown.com/windows/download");
   }
   throw new Error("not found");
 }
@@ -104,7 +104,7 @@ async function arc() {
   const latest = items[0][0];
   const cm = latest.match(/Chromium\s+(\d+\.\d+\.\d+\.\d+)/i);
   if (!cm) throw new Error("Chromium version not found in appcast");
-  return ok("Arc", cm[1], parseInt(cm[1], 10), "source: Sparkle appcast (releases.arc.net)");
+  return ok("Arc", cm[1], parseInt(cm[1], 10), "source: Sparkle appcast (releases.arc.net)", "https://releases.arc.net/updates.xml");
 }
 
 // --- Handler ---
