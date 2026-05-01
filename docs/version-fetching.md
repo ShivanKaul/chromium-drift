@@ -28,7 +28,7 @@ Fetches the Sparkle appcast at `releases.arc.net/updates.xml`. Arc is in mainten
 
 Chromium versions for these are extracted from local binaries. The CI is run daily via GitHub Actions, results stored in `ci-versions.json`:
 
-### Vivaldi Release
+### Vivaldi Stable
 
 Downloads the Vivaldi Linux .deb package, extracts the `vivaldi-bin` binary, and uses `strings` to find the embedded Chromium version.
 
