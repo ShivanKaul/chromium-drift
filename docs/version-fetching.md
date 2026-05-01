@@ -26,7 +26,7 @@ Fetches the Sparkle appcast at `releases.arc.net/updates.xml`. Arc is in mainten
 
 ## CI-detected versions
 
-Chromium versions for these are extracted from local binaries. The CI is run daily via GitHub Actions, results stored in `ci-versions.json`:
+Chromium versions for these are extracted from local binaries. The CI is run daily via GitHub Actions via the [`update-versions.js`](https://github.com/ShivanKaul/chromium-drift/blob/main/.github/update-versions.js) script and the results are stored in `ci-versions.json`:
 
 ### Vivaldi Stable
 
