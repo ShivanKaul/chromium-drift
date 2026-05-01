@@ -127,12 +127,16 @@
     }
 
     .card {
+      display: block;
+      text-decoration: none;
+      color: inherit;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 22px 24px;
       transition: box-shadow 0.2s, background 0.2s, border-color 0.2s, transform 0.15s;
       box-shadow: var(--shadow-sm);
+      cursor: pointer;
     }
     .card:hover {
       box-shadow: var(--shadow-md);
@@ -289,6 +293,26 @@
       "Comet", "Opera Stable", "Edge Stable", "Arc", "Dia",
     ];
 
+    const DOCS_BASE = "https://github.com/ShivanKaul/chromium-drift/blob/main/docs/version-fetching.md#";
+    const DOCS_ANCHORS = {
+      "Chrome Stable": "chrome-stable",
+      "Brave Release": "brave-release",
+      "Edge Stable": "edge-stable",
+      "Comet": "perplexity-comet",
+      "Arc": "arc",
+      "Vivaldi Stable": "vivaldi-release",
+      "Opera Stable": "opera-stable",
+      "ChatGPT Atlas": "chatgpt-atlas",
+      "Dia": "dia",
+    };
+
+    function cardUrl(e) {
+      if (e.sourceUrl && /^https?:\/\//.test(e.sourceUrl)) return e.sourceUrl;
+      const anchor = DOCS_ANCHORS[e.browser];
+      if (anchor) return DOCS_BASE + anchor;
+      return null;
+    }
+
     // State shared across card updates
     let chromeMajor = null;
 
@@ -337,7 +361,7 @@
         '<div class="cr-full">' +
           (e.chromiumVersion ? esc(e.chromiumVersion) : "") + '</div>' +
         '<span class="delta ' + dCls(delta) + '">' + dLabel(delta, ref) + '</span>' +
-        '<div class="source">' + (e.sourceUrl && /^https?:\/\//.test(e.sourceUrl) ? '<a href="' + esc(e.sourceUrl) + '" target="_blank" rel="noopener" style="color:inherit">' + esc(e.source) + '</a>' : esc(e.source)) + '</div>';
+        '<div class="source">' + esc(e.source) + '</div>';
     }
 
     // Build the grid with skeleton cards for every browser in ORDER
@@ -345,9 +369,13 @@
       const grid = document.getElementById("grid");
       grid.innerHTML = "";
       for (const name of ORDER) {
-        const c = document.createElement("div");
+        const c = document.createElement("a");
         c.className = "card";
         c.dataset.browser = name;
+        const anchor = DOCS_ANCHORS[name];
+        if (anchor) c.href = DOCS_BASE + anchor;
+        c.target = "_blank";
+        c.rel = "noopener";
         const ref = name === "Chrome Stable";
         if (ref) c.classList.add("reference");
         c.innerHTML =
@@ -390,10 +418,15 @@
       const grid = document.getElementById("grid");
       let c = grid.querySelector('[data-browser="' + CSS.escape(e.browser) + '"]');
       if (!c) {
-        c = document.createElement("div");
+        c = document.createElement("a");
         c.dataset.browser = e.browser;
+        c.target = "_blank";
+        c.rel = "noopener";
         grid.appendChild(c);
       }
+
+      const url = cardUrl(e);
+      if (url) c.href = url;
 
       const delta = chromeMajor != null && e.chromiumMajor != null ? chromeMajor - e.chromiumMajor : null;
       const cc = cardColorCls(delta);
