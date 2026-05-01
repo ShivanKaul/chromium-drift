@@ -16,5 +16,7 @@ jobs:
           node-version: 20
       - name: Validate manual-versions.json
         run: node test/validate-manual-versions.js
+      - name: Validate ci-versions.json
+        run: node test/validate-manual-versions.js ci-versions.json
       - name: Run tests
         run: node test/test.js
