@@ -249,6 +249,52 @@ await test("Arc appcast: extracts Chromium version from description", () => {
   assert(cm[1] === "147.0.7727.117", "should extract correct version");
 });
 
+// -- update-versions.js shell safety --
+
+await test("Framework name filter: rejects shell metacharacters", () => {
+  const re = /^[\w.-]+\.framework$/;
+  // Safe names
+  assert(re.test("ArcCore.framework"), "ArcCore.framework should pass");
+  assert(re.test("Electron_Framework.framework"), "underscores should pass");
+  assert(re.test("lib-core.v2.framework"), "hyphens and dots should pass");
+  // Dangerous names
+  assert(!re.test('evil"; rm -rf /.framework'), "shell injection should fail");
+  assert(!re.test("$(whoami).framework"), "command substitution should fail");
+  assert(!re.test("`id`.framework"), "backtick injection should fail");
+  assert(!re.test("../../../etc.framework"), "path traversal should fail");
+  assert(!re.test("name with spaces.framework"), "spaces should fail");
+  assert(!re.test(""), "empty string should fail");
+});
+
+await test("Framework name filter: rejects names without .framework suffix", () => {
+  const re = /^[\w.-]+\.framework$/;
+  assert(!re.test("ArcCore"), "no suffix should fail");
+  assert(!re.test("ArcCore.dylib"), "wrong suffix should fail");
+  assert(!re.test(".framework"), "just suffix should fail (empty base)");
+});
+
+await test("Chrome version extraction from strings output: parses correctly", () => {
+  const stringsOutput = [
+    "some random text",
+    "Chrome/147.0.7727.117 Safari/537.36",
+    "Mozilla/5.0 Chrome/147.0.7727.117",
+    "not a version 999.888.777",
+    "Chrome/146.0.7680.211 Safari/537.36",
+  ].join("\n");
+  const matches = stringsOutput.match(/Chrome\/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/g);
+  assert(matches, "should find Chrome/ patterns");
+  const versions = [...new Set(matches.map(m => m.replace("Chrome/", "")))];
+  assert(versions.length === 2, "should find 2 unique versions, got " + versions.length);
+  assert(versions.includes("147.0.7727.117"), "should include 147.0.7727.117");
+  assert(versions.includes("146.0.7680.211"), "should include 146.0.7680.211");
+});
+
+await test("Chrome version extraction from strings output: no match returns null", () => {
+  const stringsOutput = "just some random binary text\nno versions here\n";
+  const matches = stringsOutput.match(/Chrome\/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/g);
+  assert(matches === null, "should return null when no Chrome/ patterns found");
+});
+
 await test("Dia appcast: extracts ZIP URL from highest build", () => {
   const xml = `<rss><channel>
     <item><version xmlns="http://www.andymatuschak.org/xml-namespaces/sparkle">79000</version>

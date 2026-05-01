@@ -10,10 +10,27 @@
 // Requires: Node 20+, p7zip-full (for .deb and Atlas DMG extraction)
 // Usage:    node update-versions.js
 
-import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync } from "node:fs";
-import { execSync } from "node:child_process";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, statSync } from "node:fs";
+import { execSync, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+// Recursively find files matching a predicate. Returns an array of absolute paths.
+function findFiles(dir, predicate, maxDepth = 10) {
+  const results = [];
+  function walk(d, depth) {
+    if (depth > maxDepth) return;
+    let entries;
+    try { entries = readdirSync(d, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      const full = join(d, e.name);
+      if (e.isDirectory()) walk(full, depth + 1);
+      else if (e.isFile() && predicate(full, e)) results.push(full);
+    }
+  }
+  walk(dir, 0);
+  return results;
+}
 
 const FETCH_TIMEOUT = 15_000;
 const DMG_TIMEOUT = 120_000;
@@ -259,36 +276,41 @@ async function detectAtlas() {
     }
 
     // Step 2: find and extract from HFS image if present
+    const PLIST_SUFFIX = "/Support/ChatGPT Atlas.app/Contents/Info.plist";
     let plistContent;
     try {
       // Try to find the plist directly (if 7z extracted files)
-      const findCmd = `find "${extractDir}" -path "*/Support/ChatGPT Atlas.app/Contents/Info.plist" 2>&1 | head -1`;
-      let plistPath = execSync(findCmd, { encoding: "utf8", timeout: 10_000 }).trim();
+      let plistPaths = findFiles(extractDir, (p) => p.endsWith(PLIST_SUFFIX));
+      let plistPath = plistPaths[0] || null;
 
       if (!plistPath) {
         // Look for HFS image and extract from it
-        const hfsCmd = `find "${extractDir}" -name "*.hfs" -o -name "*.img" -o -name "disk image" 2>&1 | head -1`;
-        const hfsPath = execSync(hfsCmd, { encoding: "utf8", timeout: 10_000 }).trim();
-        if (hfsPath) {
+        const hfsImages = findFiles(extractDir, (p, e) =>
+          e.name.endsWith(".hfs") || e.name.endsWith(".img") || e.name === "disk image"
+        );
+        if (hfsImages[0]) {
           const hfsDir = join(tmp, "hfs");
-          execSync(`${SZ} x -o"${hfsDir}" "${hfsPath}" -y 2>&1`, {
-            timeout: 60_000,
-          });
-          const findCmd2 = `find "${hfsDir}" -path "*/Support/ChatGPT Atlas.app/Contents/Info.plist" 2>&1 | head -1`;
-          plistPath = execSync(findCmd2, { encoding: "utf8", timeout: 10_000 }).trim();
+          spawnSync(SZ, ["x", "-o" + hfsDir, hfsImages[0], "-y"], { timeout: 60_000 });
+          plistPaths = findFiles(hfsDir, (p) => p.endsWith(PLIST_SUFFIX));
+          plistPath = plistPaths[0] || null;
         }
 
         // Also try: 7z may extract a numbered file like "2.hfs" or similar
         if (!plistPath) {
-          const numberedCmd = `find "${extractDir}" -maxdepth 1 -type f -size +1M 2>&1 | head -1`;
-          const numberedFile = execSync(numberedCmd, { encoding: "utf8", timeout: 10_000 }).trim();
-          if (numberedFile) {
+          const topEntries = readdirSync(extractDir, { withFileTypes: true });
+          const largeFile = topEntries
+            .filter((e) => e.isFile())
+            .map((e) => {
+              const full = join(extractDir, e.name);
+              try { return { path: full, size: statSync(full).size }; } catch { return null; }
+            })
+            .filter((e) => e && e.size > 1024 * 1024)
+            .sort((a, b) => b.size - a.size)[0];
+          if (largeFile) {
             const hfsDir = join(tmp, "hfs2");
-            execSync(`${SZ} x -o"${hfsDir}" "${numberedFile}" -y 2>&1`, {
-              timeout: 60_000,
-            });
-            const findCmd3 = `find "${hfsDir}" -path "*/Support/ChatGPT Atlas.app/Contents/Info.plist" 2>&1 | head -1`;
-            plistPath = execSync(findCmd3, { encoding: "utf8", timeout: 10_000 }).trim();
+            spawnSync(SZ, ["x", "-o" + hfsDir, largeFile.path, "-y"], { timeout: 60_000 });
+            plistPaths = findFiles(hfsDir, (p) => p.endsWith(PLIST_SUFFIX));
+            plistPath = plistPaths[0] || null;
           }
         }
       }
@@ -358,16 +380,16 @@ async function detectDia() {
 
     let ver;
     for (const fw of fwEntries) {
+      if (!/^[\w.-]+\.framework$/.test(fw)) continue;
       const fwName = fw.replace(".framework", "");
       const binaryPath = join(fwDir, fw, fwName);
       try { readFileSync(binaryPath, { flag: "r" }); } catch { continue; }
       console.log("  Checking: " + fw);
-      const cmd =
-        `strings "${binaryPath}"` +
-        ` | grep -oE 'Chrome/[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+'` +
-        ` | sed 's/Chrome\\///'` +
-        ` | sort -u`;
-      const out = execSync(cmd, { encoding: "utf8", timeout: 60_000 }).trim();
+      const result = spawnSync("strings", [binaryPath], { encoding: "utf8", timeout: 60_000, maxBuffer: 50 * 1024 * 1024 });
+      if (result.status !== 0) continue;
+      const matches = result.stdout.match(/Chrome\/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/g);
+      if (!matches) continue;
+      const out = [...new Set(matches.map(m => m.replace("Chrome/", "")))].join("\n");
       if (!out) continue;
       const candidates = out.split("\n").filter((v) => {
         const parts = v.split(".");

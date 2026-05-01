@@ -265,7 +265,7 @@
 
   <div class="container">
     <div class="toolbar">
-      <button id="refresh-btn" onclick="refresh()">Refresh</button>
+      <button id="refresh-btn">Refresh</button>
       <span class="meta" id="status">Loading...</span>
     </div>
 
@@ -304,7 +304,7 @@
     };
 
     function cardUrl(e) {
-      if (e.sourceUrl && /^https?:\/\//.test(e.sourceUrl)) return e.sourceUrl;
+      if (e.sourceUrl && /^https:\/\/[^\s<>"]+$/.test(e.sourceUrl)) return e.sourceUrl;
       const anchor = DOCS_ANCHORS[e.browser];
       if (anchor) return DOCS_BASE + anchor;
       return null;
@@ -354,7 +354,7 @@
       }
       return '<div class="browser-name">' + esc(e.browser) +
           (ref ? ' <span class="ref-badge">baseline</span>' : '') + '</div>' +
-        '<div class="cr-major">' + (e.chromiumMajor || "?") + '</div>' +
+        '<div class="cr-major">' + (parseInt(e.chromiumMajor, 10) || "?") + '</div>' +
         '<div class="cr-full">' +
           (e.chromiumVersion ? esc(e.chromiumVersion) : "") + '</div>' +
         '<span class="delta ' + dCls(delta) + '">' + dLabel(delta, ref) + '</span>' +
@@ -485,7 +485,7 @@
       }
     }
 
-    function refresh() { load(true); }
+    document.getElementById("refresh-btn").addEventListener("click", () => load(true));
     load(false);
     setInterval(() => load(false), 5 * 60 * 1000);
   </script>
