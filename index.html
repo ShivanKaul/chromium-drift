@@ -126,6 +126,37 @@
     .card .source { margin-top: 12px; font-size: 11px; color: var(--text-muted); }
     .card.error-card .cr-major { font-size: 16px; font-weight: 500; color: var(--red); }
 
+    .why-section {
+      margin: 0 0 28px;
+      padding: 20px 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+    .why-section summary {
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 15px;
+      color: var(--text);
+    }
+    .why-section summary:hover { color: var(--accent); }
+    .why-section .why-body { margin-top: 12px; }
+    .why-section ul { margin: 8px 0 0 20px; }
+    .why-section li { margin-bottom: 4px; }
+
+    .check-your-browser {
+      display: inline-block;
+      margin-top: 12px;
+      font-size: 13px;
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .check-your-browser:hover { text-decoration: underline; }
+
     .loading-state {
       text-align: center; padding: 80px 20px;
       color: var(--text-muted); font-size: 15px;
@@ -165,6 +196,14 @@
   </div>
 
   <main>
+    <details class="why-section">
+      <summary>Why does Chromium version lag matter?</summary>
+      <div class="why-body">
+        <p>When a browser ships an older Chromium version, its users are exposed to <strong>known, already-patched security vulnerabilities</strong>. Attackers actively exploit these flaws, since the fixes are public in Chromium's source but not yet shipped to users of the lagging browser.</p>
+        <a class="check-your-browser" href="https://chromiumchecker.com" target="_blank" rel="noopener">Check your own browser's Chromium version &#8594;</a>
+      </div>
+    </details>
+
     <div id="content">
       <div id="grid" class="grid"></div>
     </div>
