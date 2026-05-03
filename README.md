@@ -18,6 +18,7 @@ https://chromium-drift.pages.dev
 7. Perplexity Comet
 8. Arc
 9. Dia
+10. Helium
 
 ## Docs
 

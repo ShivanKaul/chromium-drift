@@ -22,5 +22,11 @@
     "lastUpdated": "2026-05-01",
     "source": "extracted from macOS ZIP binary",
     "chromiumVersion": "147.0.7727.138"
+  },
+  "helium": {
+    "chromiumMajor": 147,
+    "lastUpdated": "2026-05-03",
+    "source": "GitHub release chromium_version.txt",
+    "chromiumVersion": "147.0.7727.137"
   }
 }

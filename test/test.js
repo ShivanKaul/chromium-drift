@@ -313,6 +313,22 @@ await test("Dia appcast: extracts ZIP URL from highest build", () => {
   assert(items[0][2] === "https://releases.diabrowser.com/release/Dia-1.28.0-79513.zip", "should pick highest build ZIP");
 });
 
+await test("Helium chromium_version.txt: parses valid version", () => {
+  const content = "147.0.7727.137\n";
+  const ver = content.trim();
+  assert(/^\d+\.\d+\.\d+\.\d+$/.test(ver), "should match x.x.x.x format");
+  assert(ver === "147.0.7727.137", "should extract correct version");
+  const major = parseInt(ver, 10);
+  assert(major === 147, "major should be 147");
+});
+
+await test("Helium chromium_version.txt: rejects invalid formats", () => {
+  const invalid = ["147.0.7727", "not-a-version", "147", "", "   "];
+  for (const v of invalid) {
+    assert(!/^\d+\.\d+\.\d+\.\d+$/.test(v.trim()), v + " should be rejected");
+  }
+});
+
 // ---------------------------------------------------------------------------
 // Integration tests: real API calls
 // ---------------------------------------------------------------------------
@@ -486,6 +502,26 @@ await test("Dia: Sparkle appcast has ZIP enclosure", async () => {
   assert(items.length > 0, "should have at least one item with a ZIP URL");
   items.sort((a, b) => Number(b[1]) - Number(a[1]));
   assert(items[0][2].startsWith("https://"), "ZIP URL should be HTTPS");
+});
+
+await test("Helium: GitHub releases API returns tag_name", async () => {
+  const ghHeaders = { "User-Agent": "chromium-drift/1.0", "Accept": "application/vnd.github+json" };
+  const r = await f("https://api.github.com/repos/imputnet/helium/releases/latest", { headers: ghHeaders });
+  const release = await r.json();
+  assert(release.tag_name, "should have tag_name");
+  assert(/^\d+\.\d+\.\d+$/.test(release.tag_name), "tag should be semver-like, got " + release.tag_name);
+});
+
+await test("Helium: chromium_version.txt at release tag has valid version", async () => {
+  const ghHeaders = { "User-Agent": "chromium-drift/1.0", "Accept": "application/vnd.github+json" };
+  const r = await f("https://api.github.com/repos/imputnet/helium/releases/latest", { headers: ghHeaders });
+  const release = await r.json();
+  const tag = release.tag_name;
+  const vr = await f("https://raw.githubusercontent.com/imputnet/helium/" + tag + "/chromium_version.txt");
+  const ver = (await vr.text()).trim();
+  assert(/^\d+\.\d+\.\d+\.\d+$/.test(ver), "version should be x.x.x.x format, got " + ver);
+  const major = parseInt(ver, 10);
+  assert(major >= 100 && major <= 250, "Chromium major should be in range, got " + major);
 });
 
 // ---------------------------------------------------------------------------

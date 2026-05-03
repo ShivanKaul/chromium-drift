@@ -43,3 +43,7 @@ Fetches the Sparkle appcast to find the latest DMG URL, downloads the DMG, extra
 ### Dia
 
 Fetches the Sparkle appcast at `releases.diabrowser.com/BoostBrowser-updates.xml` to find the latest ZIP URL, downloads the macOS ZIP, extracts the app binary using 7z, and runs `strings` to find the embedded `Chrome/X.X.X.X` UA string.
+
+### Helium
+
+Fetches the latest GitHub release from `api.github.com/repos/imputnet/helium/releases/latest`, reads the `tag_name`, then fetches the `chromium_version.txt` file at that tag from `raw.githubusercontent.com/imputnet/helium/${tag}/chromium_version.txt`. The file contains the full Chromium version directly.
