@@ -85,7 +85,7 @@ async function comet() {
   if (m) {
     const major = parseInt(m[1], 10);
     if (major >= 100 && major <= 250)
-      return ok("Comet", null, major, "source: uptodown.com download page", "https://comet-browser.en.uptodown.com/windows/download");
+      return ok("Comet", null, major, "source: uptodown.com download page");
   }
   throw new Error("not found");
 }
