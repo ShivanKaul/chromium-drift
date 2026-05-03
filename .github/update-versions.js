@@ -6,6 +6,7 @@
 //   Vivaldi  -- download .deb, run strings on binary
 //   Atlas    -- download macOS DMG via Sparkle appcast, extract plist
 //   Dia      -- download macOS ZIP via Sparkle appcast, run strings on binary
+//   Helium   -- fetch latest GitHub release tag, read chromium_version.txt
 //
 // Requires: Node 20+, p7zip-full (for .deb and Atlas DMG extraction)
 // Usage:    node update-versions.js
@@ -410,6 +411,27 @@ async function detectDia() {
   }
 }
 
+async function detectHelium() {
+  console.log("[Helium] Fetching latest GitHub release...");
+  const ghHeaders = {
+    "User-Agent": "chromium-drift/1.0",
+    "Accept": "application/vnd.github+json",
+  };
+  const r = await f("https://api.github.com/repos/imputnet/helium/releases/latest", { headers: ghHeaders });
+  const release = await r.json();
+  const tag = release.tag_name;
+  if (!tag) throw new Error("no tag_name in release");
+  console.log("  Latest release tag: " + tag);
+
+  const vr = await f("https://raw.githubusercontent.com/imputnet/helium/" + tag + "/chromium_version.txt");
+  const ver = (await vr.text()).trim();
+  if (!/^\d+\.\d+\.\d+\.\d+$/.test(ver)) throw new Error("invalid version format: " + ver);
+  const major = parseInt(ver, 10);
+  if (major < 100 || major > 250) throw new Error("major out of range: " + major);
+  console.log("  Found: " + ver);
+  return { chromiumVersion: ver, chromiumMajor: major };
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -419,6 +441,7 @@ const browsers = [
   { key: "vivaldi", name: "Vivaldi Stable", detect: detectVivaldi, source: "extracted from Linux .deb binary" },
   { key: "atlas", name: "ChatGPT Atlas", detect: detectAtlas, source: "extracted from macOS DMG plist" },
   { key: "dia", name: "Dia", detect: detectDia, source: "extracted from macOS ZIP binary" },
+  { key: "helium", name: "Helium", detect: detectHelium, source: "GitHub release chromium_version.txt" },
 ];
 
 const jsonPath = new URL("../ci-versions.json", import.meta.url).pathname;
