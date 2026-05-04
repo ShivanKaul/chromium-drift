@@ -84,16 +84,18 @@ await test("Opera blog: extracts Chromium major-only version", () => {
   assert(mm[1] === "113", "major should be 113");
 });
 
-await test("Comet version: first component is Chromium major", () => {
-  const html = "Latest version: 145.2.7632.5936 for Windows";
-  const m = html.match(/(\d{3,})\.\d+\.\d+\.\d+/);
-  assert(m, "regex should match");
-  assert(parseInt(m[1], 10) === 145, "major should be 145");
+await test("Comet Omaha response: extracts version from nextversion field", () => {
+  const json = { response: { apps: [{ updatecheck: { nextversion: "145.2.7632.5936" } }] } };
+  const ver = json?.response?.apps?.[0]?.updatecheck?.nextversion;
+  assert(ver === "145.2.7632.5936", "should extract nextversion");
+  assert(parseInt(ver, 10) === 145, "major should be 145");
 });
 
-await test("Comet version: rejects non-Chromium-range numbers", () => {
-  const major = 50;
-  assert(!(major >= 100 && major <= 250), "50 should be rejected");
+await test("Comet Omaha response: strips XSSI prefix", () => {
+  const raw = ")]}'\n" + JSON.stringify({ response: { apps: [{ updatecheck: { nextversion: "145.2.7632.5936" } }] } });
+  const json = JSON.parse(raw.replace(/^\)\]\}'/, ""));
+  const ver = json?.response?.apps?.[0]?.updatecheck?.nextversion;
+  assert(ver === "145.2.7632.5936", "should parse after stripping prefix");
 });
 
 await test("parseDebFilename: extracts filename from Packages index", () => {
@@ -416,17 +418,27 @@ await test("Opera: stable post contains Chromium version", async () => {
   assert(crMajor >= 100 && crMajor <= 250, "Chromium major should be in range, got " + crMajor);
 });
 
-await test("Comet: Uptodown page has version string", async () => {
-  const r = await f("https://comet-browser.en.uptodown.com/windows/download", {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-    },
+await test("Comet: Omaha update API returns a version", async () => {
+  const r = await f("https://www.perplexity.ai/rest/browser/update2", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      request: {
+        protocol: "4.0",
+        os: { platform: "win", arch: "x64" },
+        apps: [{
+          appid: "{42e10078-e377-4166-965f-c14ad958a146}",
+          version: "0.0.0.0",
+          updatechecks: [{}],
+        }],
+      },
+    }),
   });
-  const html = await r.text();
-  const m = html.match(/(\d{3,})\.\d+\.\d+\.\d+/);
-  assert(m, "page should contain a version string");
-  const major = parseInt(m[1], 10);
+  const text = await r.text();
+  const json = JSON.parse(text.replace(/^\)\]\}'/, ""));
+  const ver = json?.response?.apps?.[0]?.updatecheck?.nextversion;
+  assert(ver, "should have a nextversion");
+  const major = parseInt(ver, 10);
   assert(major >= 100 && major <= 250, "major should be in Chromium range, got " + major);
 });
 

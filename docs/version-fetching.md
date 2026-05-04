@@ -18,7 +18,7 @@ Calls `edgeupdates.microsoft.com/api/products`, filters for the "Stable" product
 
 ### Perplexity Comet
 
-Scrapes [Uptodown's download page for Comet on Windows](https://comet-browser.en.uptodown.com/windows/download). Comet's version string uses the Chromium major as its first component (e.g., `145.2.7632.5936` = Chromium 145). Perplexity does not publish a version API, update feed (e.g. Sparkle appcast), or any other machine-readable source for Comet's current version. [Comet's own website](https://www.perplexity.ai/download-comet) has no version information either. I also tried downloading Comet and extracting the version in CI (like Vivaldi, Opera, etc.), but Comet's download is behind Cloudflare bot protection, which blocks automated fetches. Uptodown's download page is updated regularly, so using as a fallback.
+Queries Comet's Omaha update API at `perplexity.ai/rest/browser/update2` for Windows. This is the same protocol Comet's built-in updater uses to check for new versions. 
 
 ### Arc
 

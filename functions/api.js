@@ -74,20 +74,27 @@ async function brave() {
 
 // --- Comet ---
 async function comet() {
-  const r = await f("https://comet-browser.en.uptodown.com/windows/download", {
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-    },
+  const r = await f("https://www.perplexity.ai/rest/browser/update2", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      request: {
+        protocol: "4.0",
+        os: { platform: "win", arch: "x64" },
+        apps: [{
+          appid: "{42e10078-e377-4166-965f-c14ad958a146}",
+          version: "0.0.0.0",
+          updatechecks: [{}],
+        }],
+      },
+    }),
   });
-  const html = await r.text();
-  const m = html.match(/(\d{3,})\.\d+\.\d+\.\d+/);
-  if (m) {
-    const major = parseInt(m[1], 10);
-    if (major >= 100 && major <= 250)
-      return ok("Comet", null, major, "source: uptodown.com download page");
-  }
-  throw new Error("not found");
+  const text = await r.text();
+  const json = JSON.parse(text.replace(/^\)\]\}'/, ""));
+  const ver = json?.response?.apps?.[0]?.updatecheck?.nextversion;
+  if (!ver) throw new Error("no version in update response");
+  const major = parseInt(ver, 10);
+  return ok("Comet", ver, major, "source: Omaha update API (perplexity.ai)");
 }
 
 // --- Arc ---
