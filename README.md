@@ -4,7 +4,7 @@ How far behind is each major Chromium browser?
 
 https://chromium-drift.pages.dev
 
-<img width="1084" height="742" alt="image" src="https://github.com/user-attachments/assets/d88af0ee-efd7-406c-8f17-5411633f03c5" />
+<img width="1090" height="751" alt="image" src="https://github.com/user-attachments/assets/467ab1cb-1b3b-4e69-bee1-2ac911a6d9a1" />
 
 ## Tracked browsers
 
