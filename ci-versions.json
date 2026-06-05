@@ -7,9 +7,9 @@
   },
   "vivaldi": {
     "chromiumMajor": 148,
-    "lastUpdated": "2026-05-29",
+    "lastUpdated": "2026-06-05",
     "source": "extracted from Linux .deb binary",
-    "chromiumVersion": "148.0.7778.221"
+    "chromiumVersion": "148.0.7778.256"
   },
   "atlas": {
     "chromiumMajor": 149,
