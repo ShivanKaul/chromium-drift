@@ -18,9 +18,9 @@
     "chromiumVersion": "149.0.7827.29"
   },
   "dia": {
-    "chromiumMajor": 148,
-    "lastUpdated": "2026-05-29",
+    "chromiumMajor": 149,
+    "lastUpdated": "2026-06-09",
     "source": "extracted from macOS ZIP binary",
-    "chromiumVersion": "148.0.7778.216"
+    "chromiumVersion": "149.0.7827.54"
   }
 }
