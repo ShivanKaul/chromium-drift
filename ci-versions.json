@@ -1,25 +1,25 @@
 {
   "opera": {
-    "chromiumMajor": 147,
-    "lastUpdated": "2026-04-29",
+    "chromiumMajor": 148,
+    "lastUpdated": "2026-06-10",
     "source": "extracted from Linux .deb binary",
-    "chromiumVersion": "147.0.7727.56"
+    "chromiumVersion": "148.0.7778.218"
   },
   "vivaldi": {
-    "chromiumMajor": 146,
-    "lastUpdated": "2026-04-30",
+    "chromiumMajor": 148,
+    "lastUpdated": "2026-06-10",
     "source": "extracted from Linux .deb binary",
-    "chromiumVersion": "146.0.7680.218"
+    "chromiumVersion": "148.0.7778.263"
   },
   "atlas": {
-    "chromiumMajor": 147,
-    "lastUpdated": "2026-04-24",
+    "chromiumMajor": 149,
+    "lastUpdated": "2026-05-30",
     "source": "extracted from macOS DMG plist",
-    "chromiumVersion": "147.0.7727.24"
+    "chromiumVersion": "149.0.7827.29"
   },
   "dia": {
-    "chromiumMajor": 147,
-    "lastUpdated": "2026-05-01",
+    "chromiumMajor": 149,
+    "lastUpdated": "2026-06-13",
     "source": "extracted from macOS ZIP binary",
     "chromiumVersion": "147.0.7727.138"
   },
@@ -27,6 +27,6 @@
     "chromiumMajor": 148,
     "lastUpdated": "2026-05-06",
     "source": "extracted from helium-linux release tag via helium-chromium/chromium_version.txt",
-    "chromiumVersion": "148.0.7778.96"
+    "chromiumVersion": "149.0.7827.115"
   }
 }

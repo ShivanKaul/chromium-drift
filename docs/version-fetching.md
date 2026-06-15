@@ -2,7 +2,7 @@
 
 ## Live fetchers
 
-Chromium versions for these browsers are fetched live on page load:
+Chromium versions for these browsers are fetched live on page load. The fetching logic lives in [`lib/fetchers.js`](https://github.com/ShivanKaul/chromium-drift/blob/main/lib/fetchers.js).
 
 ### Chrome Stable
 
@@ -20,7 +20,14 @@ Calls `edgeupdates.microsoft.com/api/products`, filters for the "Stable" product
 
 ### Perplexity Comet
 
-Queries Comet's Omaha update API at `perplexity.ai/rest/browser/update2` for Windows. This is the same protocol Comet's built-in updater uses to check for new versions. 
+Queries Comet's Omaha update API at `perplexity.ai/rest/browser/update2` for Windows. This is the same protocol Comet's built-in updater uses to check for new versions.
+
+```bash
+JSON='{"request":{"protocol":"4.0","os":{"platform":"mac","arch":"arm64"},"apps":[{"appid":"{42e10078-e377-4166-965f-c14ad958a146}","version":"0.0.0.0","updatechecks":[{}]}]}}'
+curl -s -X POST "https://www.perplexity.ai/rest/browser/update2" \
+  -H "Content-Type: application/json" \
+  -d "$JSON" | sed "s/^)]}'//" | jq -r '.response.apps[0].updatecheck.nextversion'
+```
 
 ### Arc
 

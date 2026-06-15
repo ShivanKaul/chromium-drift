@@ -3,6 +3,8 @@ name: Update browser versions
 on:
   schedule:
     - cron: '0 8 * * *'
+    # Fallback run in case the first one fails due to runner availability
+    - cron: '0 9 * * *'
   workflow_dispatch: {}
 
 permissions:
