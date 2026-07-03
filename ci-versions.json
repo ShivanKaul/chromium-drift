@@ -7,9 +7,9 @@
   },
   "vivaldi": {
     "chromiumMajor": 148,
-    "lastUpdated": "2026-06-25",
+    "lastUpdated": "2026-07-03",
     "source": "extracted from Linux .deb binary",
-    "chromiumVersion": "148.0.7778.282"
+    "chromiumVersion": "148.0.7778.289"
   },
   "atlas": {
     "chromiumMajor": 149,
@@ -18,10 +18,10 @@
     "chromiumVersion": "149.0.7827.29"
   },
   "dia": {
-    "chromiumMajor": 149,
-    "lastUpdated": "2026-06-27",
+    "chromiumMajor": 150,
+    "lastUpdated": "2026-07-03",
     "source": "extracted from macOS ZIP binary",
-    "chromiumVersion": "149.0.7827.201"
+    "chromiumVersion": "150.0.7871.47"
   },
   "helium": {
     "chromiumMajor": 150,
