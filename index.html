@@ -442,8 +442,13 @@
           </p>
 
           <p><strong>What do the colors mean?</strong><br>
-            Blue = same Chromium major version as Chrome Stable. Yellow = 1 major version behind. Red = 2 or more major
-            versions behind.</p>
+            Blue = same Chromium major version as Chrome Stable, or ahead (see below). Yellow = 1 major version behind.
+            Red = 2 or more major versions behind.</p>
+
+          <p><strong>Why does a browser on a newer Chromium major than Chrome Stable show as "up to date"?</strong><br>
+            Google rolls out each Chrome Stable release gradually, so the version reported here can briefly lag the newest
+            Chromium major even after that major has shipped. Another Chromium browser that has already picked up the
+            newer major is not behind, so it's shown as up to date (blue).</p>
 
           <p><strong>Does being a major version behind Chrome Stable mean a browser is insecure?</strong><br>
             Not necessarily. Some browsers intentionally track Chromium's Extended Stable channel and backport security
@@ -499,14 +504,14 @@
 
     function dCls(d) {
       if (d == null) return "delta-unknown";
-      if (d === 0) return "delta-0";
+      if (d <= 0) return "delta-0";
       if (d === 1) return "delta-1";
       return "delta-3";
     }
 
     function cardColorCls(d) {
       if (d == null) return "";
-      if (d === 0) return "card-good";
+      if (d <= 0) return "card-good";
       if (d === 1) return "card-warn";
       return "card-bad";
     }
@@ -518,7 +523,7 @@
     function dLabel(d, ref) {
       if (ref) return "baseline";
       if (d == null) return "unknown";
-      if (d === 0) return ICON_CHECK + "up to date";
+      if (d <= 0) return ICON_CHECK + "up to date";
       if (d === 1) return ICON_WARN + d + " major version behind";
       return ICON_X + d + " major versions behind";
     }
