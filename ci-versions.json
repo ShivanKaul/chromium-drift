@@ -6,10 +6,10 @@
     "chromiumVersion": "149.0.7827.201"
   },
   "vivaldi": {
-    "chromiumMajor": 148,
-    "lastUpdated": "2026-07-03",
+    "chromiumMajor": 150,
+    "lastUpdated": "2026-07-09",
     "source": "extracted from Linux .deb binary",
-    "chromiumVersion": "148.0.7778.289"
+    "chromiumVersion": "150.0.7871.113"
   },
   "atlas": {
     "chromiumMajor": 149,
@@ -25,8 +25,8 @@
   },
   "helium": {
     "chromiumMajor": 150,
-    "lastUpdated": "2026-07-02",
+    "lastUpdated": "2026-07-09",
     "source": "extracted from helium-linux release tag via helium-chromium/chromium_version.txt",
-    "chromiumVersion": "150.0.7871.46"
+    "chromiumVersion": "150.0.7871.100"
   }
 }
