@@ -11,12 +11,6 @@
     "source": "extracted from Linux .deb binary",
     "chromiumVersion": "150.0.7871.113"
   },
-  "atlas": {
-    "chromiumMajor": 149,
-    "lastUpdated": "2026-05-30",
-    "source": "extracted from macOS DMG plist",
-    "chromiumVersion": "149.0.7827.29"
-  },
   "dia": {
     "chromiumMajor": 150,
     "lastUpdated": "2026-07-03",

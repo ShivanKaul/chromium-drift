@@ -2,7 +2,7 @@
 // versions into snapshots.ndjson.
 //
 // Fetches live browsers (Chrome, Edge, Brave, Comet, Arc) via the shared
-// fetcher library, and reads CI-detected browsers (Vivaldi, Opera, Atlas, Dia)
+// fetcher library, and reads CI-detected browsers (Vivaldi, Opera, Dia)
 // from ci-versions.json.
 //
 // Usage: node .github/snapshot-versions.js

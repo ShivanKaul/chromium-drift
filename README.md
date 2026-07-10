@@ -13,11 +13,10 @@ https://chromium-drift.pages.dev
 3. Edge
 4. Vivaldi Release
 5. Opera
-6. ChatGPT Atlas
-7. Perplexity Comet
-8. Arc
-9. Dia
-10. Helium
+6. Perplexity Comet
+7. Arc
+8. Dia
+9. Helium
 
 ## Docs
 

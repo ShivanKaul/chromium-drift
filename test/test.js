@@ -157,36 +157,6 @@ await test("Chromium version broad search: filters by third component > 1000", (
   assert(candidates.includes("146.0.7680.211"), "should include Chromium version");
 });
 
-await test("Atlas plist parsing: extracts CFBundleShortVersionString", () => {
-  const plist = `<?xml version="1.0" encoding="UTF-8"?>
-<plist version="1.0"><dict>
-  <key>CFBundleName</key><string>Atlas</string>
-  <key>CFBundleShortVersionString</key>
-  <string>147.0.7727.24</string>
-  <key>CFBundleSignature</key><string>CGPT</string>
-</dict></plist>`;
-  const m = plist.match(/<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/);
-  assert(m, "regex should match");
-  assert(m[1].trim() === "147.0.7727.24", "should extract version");
-});
-
-await test("Atlas Sparkle appcast: extracts DMG URL from highest build", () => {
-  const xml = `<rss><channel>
-    <item><sparkle:version>20260101000000000</sparkle:version>
-      <enclosure url="https://example.com/old.dmg"/></item>
-    <item><sparkle:version>20260416164957000</sparkle:version>
-      <enclosure url="https://example.com/latest.dmg"/></item>
-    <item><sparkle:version>20260201000000000</sparkle:version>
-      <enclosure url="https://example.com/mid.dmg"/></item>
-  </channel></rss>`;
-  const items = [...xml.matchAll(
-    /<item>[\s\S]*?<sparkle:version>(\d+)<\/sparkle:version>[\s\S]*?url="([^"]+\.dmg)"[\s\S]*?<\/item>/g
-  )];
-  assert(items.length === 3, "should find 3 items");
-  items.sort((a, b) => Number(b[1]) - Number(a[1]));
-  assert(items[0][2] === "https://example.com/latest.dmg", "should pick highest build");
-});
-
 await test("Chrome schedule: stable_date rollout buffer logic", () => {
   // The chrome() function gets today in PT as YYYY-MM-DD and checks
   // todayPT > stableDate (strictly after), giving a 1-day buffer.
@@ -526,19 +496,6 @@ await test("Vivaldi: .deb Packages index has vivaldi-stable entry", async () => 
   assert(text.includes("Package: vivaldi-stable"), "should contain vivaldi-stable package");
   const m = text.match(/Filename:\s*(pool\/main\/[^\n]+\.deb)/);
   assert(m, "should have a .deb filename");
-});
-
-await test("Atlas: Sparkle appcast has DMG enclosure", async () => {
-  const r = await f(
-    "https://persistent.oaistatic.com/atlas/public/sparkle_public_appcast.xml"
-  );
-  const xml = await r.text();
-  const items = [...xml.matchAll(
-    /<item>[\s\S]*?<sparkle:version>(\d+)<\/sparkle:version>[\s\S]*?url="([^"]+\.dmg)"[\s\S]*?<\/item>/g
-  )];
-  assert(items.length > 0, "should have at least one item with a DMG URL");
-  items.sort((a, b) => Number(b[1]) - Number(a[1]));
-  assert(items[0][2].startsWith("https://"), "DMG URL should be HTTPS");
 });
 
 await test("Arc: Sparkle appcast has Chromium version in description", async () => {

@@ -20,7 +20,7 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install 7zip (for .deb and Atlas DMG extraction)
+      - name: Install 7zip (for .deb and Dia ZIP extraction)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq 7zip
 
       - name: Detect versions and update ci-versions.json

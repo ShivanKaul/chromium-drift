@@ -4,41 +4,24 @@
 // Browsers handled:
 //   Opera    -- download .deb, run strings on binary
 //   Vivaldi  -- download .deb, run strings on binary
-//   Atlas    -- download macOS DMG via Sparkle appcast, extract plist
 //   Dia      -- download macOS ZIP via Sparkle appcast, run strings on binary
 //   Helium   -- helium-linux release tag → helium-chromium submodule → chromium_version.txt
 //
-// Requires: Node 20+, p7zip-full (for .deb and Atlas DMG extraction)
+// Requires: Node 20+, p7zip-full (for .deb and Dia ZIP extraction)
 // Usage:    node update-versions.js
 
-import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync } from "node:fs";
 import { execSync, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-// Recursively find files matching a predicate. Returns an array of absolute paths.
-function findFiles(dir, predicate, maxDepth = 10) {
-  const results = [];
-  function walk(d, depth) {
-    if (depth > maxDepth) return;
-    let entries;
-    try { entries = readdirSync(d, { withFileTypes: true }); } catch { return; }
-    for (const e of entries) {
-      const full = join(d, e.name);
-      if (e.isDirectory()) walk(full, depth + 1);
-      else if (e.isFile() && predicate(full, e)) results.push(full);
-    }
-  }
-  walk(dir, 0);
-  return results;
-}
-
 const FETCH_TIMEOUT = 15_000;
-const DMG_TIMEOUT = 120_000;
+const DOWNLOAD_TIMEOUT = 120_000;
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36";
 
 // Use 7zz (from 7zip package) if available, fall back to 7z (from p7zip-full).
-// Ubuntu 22.04+ ships 7zz which has better DMG/HFS+ support.
+// Ubuntu 22.04+ ships 7zz, which is more robust at extracting the .deb and
+// ZIP archives we download.
 let SZ;
 try { execSync("7zz --help", { stdio: "ignore" }); SZ = "7zz"; }
 catch { SZ = "7z"; }
@@ -76,7 +59,7 @@ function parseDebFilename(packagesText, packageName) {
 // Download a .deb file to a temp directory and return the path.
 async function downloadDeb(url, label) {
   console.log("  Downloading " + label + " .deb...");
-  const r = await f(url, {}, DMG_TIMEOUT);
+  const r = await f(url, {}, DOWNLOAD_TIMEOUT);
   const buf = Buffer.from(await r.arrayBuffer());
   const tmp = mkdtempSync(join(tmpdir(), label + "-"));
   const path = join(tmp, label + ".deb");
@@ -230,116 +213,6 @@ async function detectVivaldi() {
   }
 }
 
-async function detectAtlas() {
-  console.log("[Atlas] Fetching Sparkle appcast...");
-  const r = await f(
-    "https://persistent.oaistatic.com/atlas/public/sparkle_public_appcast.xml"
-  );
-  const xml = await r.text();
-
-  // Find the DMG URL from the item with the highest build number.
-  // Each <item> has <sparkle:version>BUILD</sparkle:version> and
-  // <enclosure url="...dmg" .../>. Pick the highest build.
-  const items = [...xml.matchAll(
-    /<item>[\s\S]*?<sparkle:version>(\d+)<\/sparkle:version>[\s\S]*?url="([^"]+\.dmg)"[\s\S]*?<\/item>/g
-  )];
-  if (!items.length) throw new Error("No DMG items in appcast");
-  items.sort((a, b) => Number(b[1]) - Number(a[1]));
-  const dmgUrl = items[0][2];
-  console.log("  DMG URL: " + dmgUrl + " (build " + items[0][1] + ")");
-
-  // Download the DMG
-  console.log("  Downloading DMG...");
-  const dmgResp = await f(dmgUrl, {}, DMG_TIMEOUT);
-  const buf = Buffer.from(await dmgResp.arrayBuffer());
-  const tmp = mkdtempSync(join(tmpdir(), "atlas-"));
-  const dmgPath = join(tmp, "atlas.dmg");
-  writeFileSync(dmgPath, buf);
-  console.log("  Downloaded " + (buf.length / 1024 / 1024).toFixed(1) + " MB");
-
-  try {
-    // Extract with 7z. DMGs often have nested layers: DMG -> HFS -> files.
-    // First, list contents to find the inner plist path.
-    const extractDir = join(tmp, "extracted");
-
-    // Step 1: extract the DMG (may produce an HFS image or files directly).
-    // 7z may exit non-zero due to "Dangerous link path" warnings from macOS
-    // installer symlinks (e.g., /Applications). This is harmless; the actual
-    // files are still extracted.
-    try {
-      execSync(`${SZ} x -o"${extractDir}" "${dmgPath}" -y 2>&1`, {
-        timeout: 60_000,
-      });
-    } catch (e) {
-      // Only tolerate "Dangerous link path" errors
-      const out = (e.stdout || e.stderr || "").toString();
-      if (!out.includes("Dangerous link path")) throw e;
-    }
-
-    // Step 2: find and extract from HFS image if present
-    const PLIST_SUFFIX = "/Support/ChatGPT Atlas.app/Contents/Info.plist";
-    let plistContent;
-    try {
-      // Try to find the plist directly (if 7z extracted files)
-      let plistPaths = findFiles(extractDir, (p) => p.endsWith(PLIST_SUFFIX));
-      let plistPath = plistPaths[0] || null;
-
-      if (!plistPath) {
-        // Look for HFS image and extract from it
-        const hfsImages = findFiles(extractDir, (p, e) =>
-          e.name.endsWith(".hfs") || e.name.endsWith(".img") || e.name === "disk image"
-        );
-        if (hfsImages[0]) {
-          const hfsDir = join(tmp, "hfs");
-          spawnSync(SZ, ["x", "-o" + hfsDir, hfsImages[0], "-y"], { timeout: 60_000 });
-          plistPaths = findFiles(hfsDir, (p) => p.endsWith(PLIST_SUFFIX));
-          plistPath = plistPaths[0] || null;
-        }
-
-        // Also try: 7z may extract a numbered file like "2.hfs" or similar
-        if (!plistPath) {
-          const topEntries = readdirSync(extractDir, { withFileTypes: true });
-          const largeFile = topEntries
-            .filter((e) => e.isFile())
-            .map((e) => {
-              const full = join(extractDir, e.name);
-              try { return { path: full, size: statSync(full).size }; } catch { return null; }
-            })
-            .filter((e) => e && e.size > 1024 * 1024)
-            .sort((a, b) => b.size - a.size)[0];
-          if (largeFile) {
-            const hfsDir = join(tmp, "hfs2");
-            spawnSync(SZ, ["x", "-o" + hfsDir, largeFile.path, "-y"], { timeout: 60_000 });
-            plistPaths = findFiles(hfsDir, (p) => p.endsWith(PLIST_SUFFIX));
-            plistPath = plistPaths[0] || null;
-          }
-        }
-      }
-
-      if (!plistPath) throw new Error("Info.plist not found in DMG");
-      plistContent = readFileSync(plistPath, "utf8");
-    } catch (e) {
-      throw new Error("Failed to extract plist from DMG: " + e.message);
-    }
-
-    // Parse CFBundleShortVersionString from the XML plist
-    const m = plistContent.match(
-      /<key>CFBundleShortVersionString<\/key>\s*<string>([^<]+)<\/string>/
-    );
-    if (!m) throw new Error("CFBundleShortVersionString not found in plist");
-    const ver = m[1].trim();
-
-    // Validate it looks like a Chromium version
-    if (!/^\d+\.\d+\.\d+\.\d+$/.test(ver)) {
-      throw new Error("Unexpected version format: " + ver);
-    }
-    console.log("  Found: " + ver);
-    return { chromiumVersion: ver, chromiumMajor: parseInt(ver, 10) };
-  } finally {
-    rmSync(tmp, { recursive: true, force: true });
-  }
-}
-
 async function detectDia() {
   console.log("[Dia] Fetching Sparkle appcast...");
   const r = await f("https://releases.diabrowser.com/BoostBrowser-updates.xml");
@@ -357,7 +230,7 @@ async function detectDia() {
 
   // Download the ZIP
   console.log("  Downloading ZIP...");
-  const zipResp = await f(zipUrl, {}, DMG_TIMEOUT);
+  const zipResp = await f(zipUrl, {}, DOWNLOAD_TIMEOUT);
   const buf = Buffer.from(await zipResp.arrayBuffer());
   const tmp = mkdtempSync(join(tmpdir(), "dia-"));
   const zipPath = join(tmp, "dia.zip");
@@ -452,7 +325,6 @@ async function detectHelium() {
 const browsers = [
   { key: "opera", name: "Opera Stable", detect: detectOpera, source: "extracted from Linux .deb binary" },
   { key: "vivaldi", name: "Vivaldi Stable", detect: detectVivaldi, source: "extracted from Linux .deb binary" },
-  { key: "atlas", name: "ChatGPT Atlas", detect: detectAtlas, source: "extracted from macOS DMG plist" },
   { key: "dia", name: "Dia", detect: detectDia, source: "extracted from macOS ZIP binary" },
   { key: "helium", name: "Helium", detect: detectHelium, source: "extracted from helium-linux release tag via helium-chromium/chromium_version.txt" },
 ];
