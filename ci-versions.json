@@ -7,20 +7,20 @@
   },
   "vivaldi": {
     "chromiumMajor": 150,
-    "lastUpdated": "2026-07-09",
+    "lastUpdated": "2026-07-10",
     "source": "extracted from Linux .deb binary",
-    "chromiumVersion": "150.0.7871.113"
+    "chromiumVersion": "150.0.7871.120"
   },
   "dia": {
     "chromiumMajor": 150,
-    "lastUpdated": "2026-07-03",
+    "lastUpdated": "2026-07-10",
     "source": "extracted from macOS ZIP binary",
-    "chromiumVersion": "150.0.7871.47"
+    "chromiumVersion": "150.0.7871.115"
   },
   "helium": {
     "chromiumMajor": 150,
-    "lastUpdated": "2026-07-09",
+    "lastUpdated": "2026-07-10",
     "source": "extracted from helium-linux release tag via helium-chromium/chromium_version.txt",
-    "chromiumVersion": "150.0.7871.100"
+    "chromiumVersion": "150.0.7871.114"
   }
 }
