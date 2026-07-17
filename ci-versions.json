@@ -13,9 +13,9 @@
   },
   "dia": {
     "chromiumMajor": 150,
-    "lastUpdated": "2026-07-10",
+    "lastUpdated": "2026-07-17",
     "source": "extracted from macOS ZIP binary",
-    "chromiumVersion": "150.0.7871.115"
+    "chromiumVersion": "150.0.7871.125"
   },
   "helium": {
     "chromiumMajor": 150,
