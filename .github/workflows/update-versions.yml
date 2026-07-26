@@ -29,7 +29,11 @@ jobs:
       - name: Validate ci-versions.json
         run: node test/validate-versions.js ci-versions.json
 
+      # continue-on-error so a failed fetcher still lets us commit the data that
+      # was written to disk; the final step re-surfaces the failure.
       - name: Record daily snapshot
+        id: snapshot
+        continue-on-error: true
         run: node .github/snapshot-versions.js
 
       - name: Commit and push if changed
@@ -40,3 +44,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Update browser versions ($(date -u +%Y-%m-%d))"
           git push
+
+      - name: Fail if a fetcher failed
+        if: steps.snapshot.outcome == 'failure'
+        run: |
+          echo "One or more fetchers failed; data was still committed. See snapshot log above."
+          exit 1
