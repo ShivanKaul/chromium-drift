@@ -31,7 +31,9 @@ curl -s -X POST "https://www.perplexity.ai/rest/browser/update2" \
 
 ### Arc
 
-Fetches the Sparkle appcast at `releases.arc.net/updates.xml`. Arc is in maintenance mode (Chromium security patches only), so every release description contains the full Chromium version.
+Fetches the Sparkle appcast at `releases.arc.net/updates.xml`. Arc is in maintenance mode (Chromium security patches only), so release descriptions typically contain the full Chromium version. Some releases omit it (linking to the release-notes page instead), so the fetcher scans items newest-to-oldest and uses the most recent one that names a Chromium version.
+
+Possible future fallback: the release-notes page is a Zendesk help center whose HTML is behind a Cloudflare bot wall (403), but its JSON API is reachable without a browser, e.g. `https://resources.arc.net/api/v2/help_center/en-us/articles/20498293324823.json`. The Chromium version can be extracted from `article.body`. We can consider this if future Arc release notes on `updates.xml` don't contain the Chromium version on bump.
 
 ## CI-detected versions
 
