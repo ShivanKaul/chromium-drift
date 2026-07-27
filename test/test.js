@@ -271,6 +271,33 @@ await test("Arc appcast: extracts Chromium version from description", () => {
   assert(cm[1] === "147.0.7727.117", "should extract correct version");
 });
 
+await test("Arc appcast: falls back to older item when newest omits Chromium version", () => {
+  // Newest build has no Chromium version in its description; an older one does.
+  const xml = `<rss><channel>
+    <item>
+      <sparkle:version>79600</sparkle:version>
+      <description><![CDATA[This release improves stability and fixes bugs.]]></description>
+      <enclosure url="https://releases.arc.net/release/Arc-1.145.0-79600.zip"/>
+    </item>
+    <item>
+      <sparkle:version>79514</sparkle:version>
+      <description><![CDATA[This update carries Arc forward to Chromium 147.0.7727.117, patching security vulnerabilities.]]></description>
+      <enclosure url="https://releases.arc.net/release/Arc-1.144.0-79514.zip"/>
+    </item>
+  </channel></rss>`;
+  const items = [...xml.matchAll(
+    /<item>[\s\S]*?<sparkle:version>(\d+)<\/sparkle:version>[\s\S]*?<\/item>/g
+  )];
+  items.sort((a, b) => Number(b[1]) - Number(a[1]));
+  let cm = null;
+  for (const [item] of items) {
+    cm = item.match(/Chromium\s+(\d+\.\d+\.\d+\.\d+)/i);
+    if (cm) break;
+  }
+  assert(cm, "should find Chromium version in an older item");
+  assert(cm[1] === "147.0.7727.117", "should extract version from the fallback item");
+});
+
 // -- update-versions.js shell safety --
 
 await test("Framework name filter: rejects shell metacharacters", () => {
@@ -506,8 +533,13 @@ await test("Arc: Sparkle appcast has Chromium version in description", async () 
   )];
   assert(items.length > 0, "should have at least one item");
   items.sort((a, b) => Number(b[1]) - Number(a[1]));
-  const cm = items[0][0].match(/Chromium\s+(\d+\.\d+\.\d+\.\d+)/i);
-  assert(cm, "latest item should mention Chromium version");
+  // Some releases omit the Chromium version, so use the newest one that names it.
+  let cm = null;
+  for (const [item] of items) {
+    cm = item.match(/Chromium\s+(\d+\.\d+\.\d+\.\d+)/i);
+    if (cm) break;
+  }
+  assert(cm, "an item should mention Chromium version");
   const major = parseInt(cm[1], 10);
   assert(major >= 100 && major <= 250, "Chromium major should be in range, got " + major);
 });
