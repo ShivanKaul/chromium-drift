@@ -1,9 +1,9 @@
 {
   "opera": {
     "chromiumMajor": 150,
-    "lastUpdated": "2026-08-05",
+    "lastUpdated": "2026-08-07",
     "source": "extracted from Linux .deb binary",
-    "chromiumVersion": "150.0.7871.187"
+    "chromiumVersion": "150.0.7871.212"
   },
   "vivaldi": {
     "chromiumMajor": 150,
@@ -13,9 +13,9 @@
   },
   "dia": {
     "chromiumMajor": 151,
-    "lastUpdated": "2026-07-31",
+    "lastUpdated": "2026-08-07",
     "source": "extracted from macOS ZIP binary",
-    "chromiumVersion": "151.0.7922.72"
+    "chromiumVersion": "151.0.7922.76"
   },
   "helium": {
     "chromiumMajor": 151,
