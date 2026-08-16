@@ -20,7 +20,7 @@ Calls `edgeupdates.microsoft.com/api/products`, filters for the "Stable" product
 
 ### Perplexity Comet
 
-Queries Comet's Omaha update API at `perplexity.ai/rest/browser/update2` for Windows. This is the same protocol Comet's built-in updater uses to check for new versions.
+Queries Comet's Omaha update API at `perplexity.ai/rest/browser/update2` for Windows. This is the same protocol Comet's built-in updater uses to check for new versions. Credit to this [Hacker News comment](https://news.ycombinator.com/item?id=48001204) for the idea.
 
 ```bash
 JSON='{"request":{"protocol":"4.0","os":{"platform":"mac","arch":"arm64"},"apps":[{"appid":"{42e10078-e377-4166-965f-c14ad958a146}","version":"0.0.0.0","updatechecks":[{}]}]}}'
