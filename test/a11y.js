@@ -93,7 +93,7 @@ function runLighthouse(url) {
         "--output=json",
         "--output-path=stdout",
         "--quiet",
-        "--chrome-flags=--headless=new --no-sandbox --disable-gpu",
+        "--chrome-flags=--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage",
       ],
       { stdio: ["ignore", "pipe", "pipe"] }
     );
