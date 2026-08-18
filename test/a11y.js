@@ -12,7 +12,7 @@ import { readFile } from "node:fs/promises";
 import { extname, join, resolve, sep } from "node:path";
 
 const MIN_SCORE = Number(process.env.A11Y_MIN_SCORE || 100);
-const LIGHTHOUSE = "lighthouse@12";
+const LIGHTHOUSE = "lighthouse@13.4.1";
 const ROOT = resolve(import.meta.dirname, "..");
 const INDEX = process.argv[2] ? resolve(process.argv[2]) : join(ROOT, "index.html");
 
@@ -86,6 +86,7 @@ function runLighthouse(url) {
       "npx",
       [
         "--yes",
+        "--ignore-scripts",
         LIGHTHOUSE,
         url,
         "--only-categories=accessibility",
