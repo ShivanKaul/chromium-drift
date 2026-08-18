@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  issues: write
 
 jobs:
   update:
@@ -44,6 +45,12 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "Update browser versions ($(date -u +%Y-%m-%d))"
           git push
+
+      - name: File or close fetcher issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE_ASSIGNEE: ${{ github.repository_owner }}
+        run: node .github/report-failures.js
 
       - name: Fail if a fetcher failed
         if: steps.snapshot.outcome == 'failure'
