@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Runs the accessibility audit before a commit, but only when index.html is
+# staged. Version-bump and doc commits skip it so they stay instant.
+#
+# Install with: git config core.hooksPath .githooks
+# Bypass once with: SKIP_A11Y=1 git commit ...
+
+set -euo pipefail
+
+if [ "${SKIP_A11Y:-}" = "1" ]; then
+  echo "pre-commit: SKIP_A11Y=1, skipping accessibility audit"
+  exit 0
+fi
+
+if ! git diff --cached --name-only | grep -qx "index.html"; then
+  exit 0
+fi
+
+repo_root="$(git rev-parse --show-toplevel)"
+tmpdir="$(mktemp -d)"
+staged="$tmpdir/index.html"
+trap 'rm -rf "$tmpdir"' EXIT
+
+# Audit the staged content, not the working tree, so unstaged edits do not
+# mask or manufacture a failure.
+git show ":index.html" > "$staged"
+
+if ! node "$repo_root/test/a11y.js" "$staged"; then
+  echo
+  echo "pre-commit: accessibility audit failed. Fix the issues above,"
+  echo "or bypass with: SKIP_A11Y=1 git commit ..."
+  exit 1
+fi

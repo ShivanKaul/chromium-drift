@@ -18,3 +18,5 @@ jobs:
         run: node test/validate-versions.js ci-versions.json
       - name: Run tests
         run: node test/test.js
+      - name: Accessibility audit
+        run: node test/a11y.js

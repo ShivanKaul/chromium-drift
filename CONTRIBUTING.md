@@ -20,4 +20,16 @@ npx wrangler pages dev .
 
 # Tests 
 node test/test.js
+
+# Accessibility audit (Lighthouse against a local stubbed /api)
+node test/a11y.js
 ```
+
+The accessibility audit must score 100. It runs in CI, and you can install it as
+a pre-commit hook that only fires when `index.html` is staged:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Bypass it for a single commit with `SKIP_A11Y=1 git commit ...`.
