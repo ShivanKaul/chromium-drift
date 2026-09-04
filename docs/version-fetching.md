@@ -6,9 +6,7 @@ Chromium versions for these browsers are fetched live on page load. The fetching
 
 ### Chrome Stable
 
-Calls `chromiumdash.appspot.com/fetch_releases` for the latest macOS stable release. The JSON response includes the full version and milestone directly.
-
-Because Chrome rolls out new stable versions gradually, the dashboard also checks the milestone schedule (`fetch_milestone_schedule`) and waits until the day after the official `stable_date` (in Pacific Time) before treating a new milestone as current. Until then, the previous milestone is shown.
+Calls the [Chrome Version History API](https://developer.chrome.com/docs/web-platform/versionhistory/guide) for macOS stable releases. The response includes the currently served builds and their rollout `fraction`; the fetcher selects the build with the highest served fraction and uses the highest version when fractions are tied. This avoids mistaking an early rollout for the current stable release.
 
 ### Brave Release
 

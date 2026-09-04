@@ -1,3 +1,5 @@
+import { selectChromeRelease } from "../lib/fetchers.js";
+
 // Tests for the Chromium version fetchers.
 // Run with: node test.js
 //
@@ -42,6 +44,16 @@ async function test(name, fn) {
 // ---------------------------------------------------------------------------
 
 console.log("\nParsing tests\n");
+
+await test("Chrome Version History: selects the most-served build", () => {
+  const release = selectChromeRelease([
+    { version: "152.0.7977.77", fraction: 0.25 },
+    { version: "152.0.7977.76", fraction: 0.5 },
+    { version: "152.0.7977.83", fraction: 1 },
+    { version: "153.0.8000.1", fraction: 0 }
+  ]);
+  assert(release.version === "152.0.7977.83", "should select the fully served build");
+});
 
 await test("Vivaldi appcast: extracts release notes link", () => {
   const xml = `<?xml version="1.0"?>
