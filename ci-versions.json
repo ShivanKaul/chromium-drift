@@ -19,8 +19,8 @@
   },
   "helium": {
     "chromiumMajor": 152,
-    "lastUpdated": "2026-09-04",
+    "lastUpdated": "2026-09-05",
     "source": "extracted from helium-linux release tag via helium-chromium/chromium_version.txt",
-    "chromiumVersion": "152.0.7977.75"
+    "chromiumVersion": "152.0.7977.82"
   }
 }
