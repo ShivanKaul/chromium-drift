@@ -7,9 +7,9 @@
   },
   "vivaldi": {
     "chromiumMajor": 152,
-    "lastUpdated": "2026-09-17",
+    "lastUpdated": "2026-09-18",
     "source": "extracted from Linux .deb binary",
-    "chromiumVersion": "152.0.7977.134"
+    "chromiumVersion": "152.0.7977.137"
   },
   "dia": {
     "chromiumMajor": 153,
