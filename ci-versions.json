@@ -13,14 +13,14 @@
   },
   "dia": {
     "chromiumMajor": 153,
-    "lastUpdated": "2026-09-18",
+    "lastUpdated": "2026-09-19",
     "source": "extracted from macOS ZIP binary",
-    "chromiumVersion": "153.0.8010.48"
+    "chromiumVersion": "153.0.8010.53"
   },
   "helium": {
     "chromiumMajor": 153,
-    "lastUpdated": "2026-09-17",
+    "lastUpdated": "2026-09-19",
     "source": "extracted from helium-linux release tag via helium-chromium/chromium_version.txt",
-    "chromiumVersion": "153.0.8010.47"
+    "chromiumVersion": "153.0.8010.52"
   }
 }
