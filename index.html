@@ -15,6 +15,7 @@
       --text-muted: #475569;
       --border: #e2e8f0;
       --accent: #2563eb;
+      --link: #2563eb;
       --good: #0066cc;
       --good-bg: #dbeafe;
       --warn: #b45309;
@@ -24,6 +25,7 @@
       --error: #dc2626;
       --gray: #556579;
       --gray-bg: #f1f5f9;
+      --badge-bg: rgba(255, 255, 255, 0.85);
       --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
       --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
       --font-sans: system-ui, -apple-system, sans-serif;
@@ -37,19 +39,21 @@
         --text: #e2e8f0;
         --text-muted: #94a3b8;
         --border: #2a3a4e;
+        /* --accent stays dark enough for white button text; --link is the
+           text-on-surface variant and has to be light instead. */
+        --link: #60a5fa;
+        --good: #60a5fa;
         --good-bg: #172554;
+        --warn: #fbbf24;
         --warn-bg: #422006;
+        --bad: #fb7185;
         --bad-bg: #4c0519;
+        --error: #f87171;
         --gray: #94a3b8;
         --gray-bg: #1e293b;
+        --badge-bg: rgba(0, 0, 0, 0.5);
         --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
         --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
-      }
-
-      .delta-0,
-      .delta-1,
-      .delta-3 {
-        background: rgba(0, 0, 0, 0.5);
       }
     }
 
@@ -95,7 +99,7 @@
     }
 
     header .subtitle a {
-      color: var(--accent);
+      color: var(--link);
       text-decoration: underline;
     }
 
@@ -239,17 +243,17 @@
     }
 
     .delta-0 {
-      background: rgba(255, 255, 255, 0.85);
+      background: var(--badge-bg);
       color: var(--good);
     }
 
     .delta-1 {
-      background: rgba(255, 255, 255, 0.85);
+      background: var(--badge-bg);
       color: var(--warn);
     }
 
     .delta-3 {
-      background: rgba(255, 255, 255, 0.85);
+      background: var(--badge-bg);
       color: var(--bad);
     }
 
@@ -297,7 +301,7 @@
     }
 
     .why-section summary:hover {
-      color: var(--accent);
+      color: var(--link);
     }
 
     .why-section .why-body {
@@ -320,7 +324,7 @@
       display: inline-block;
       margin-top: 12px;
       font-size: 13px;
-      color: var(--accent);
+      color: var(--link);
       text-decoration: none;
       font-weight: 600;
     }

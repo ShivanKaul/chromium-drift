@@ -5,6 +5,10 @@
 // render in every color state (baseline, behind, unavailable), then runs the
 // Lighthouse accessibility category against it. Nothing here touches the real
 // upstream browser-version APIs, so results are deterministic.
+//
+// Both color schemes are audited, each pinned explicitly. Without pinning,
+// Chrome inherits the host OS appearance, so the same commit scores
+// differently on a dark-mode laptop than on a light-mode CI runner.
 
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
@@ -80,7 +84,14 @@ function startServer() {
   });
 }
 
-function runLighthouse(url) {
+// blink::mojom::PreferredColorScheme is declared kDark first, so 0 is dark
+// and 1 is light.
+const SCHEMES = [
+  { name: "light", preferredColorScheme: 1 },
+  { name: "dark", preferredColorScheme: 0 },
+];
+
+function runLighthouse(url, scheme) {
   return new Promise((res, rej) => {
     const child = spawn(
       "npx",
@@ -93,7 +104,8 @@ function runLighthouse(url) {
         "--output=json",
         "--output-path=stdout",
         "--quiet",
-        "--chrome-flags=--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage",
+        "--chrome-flags=--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage" +
+          " --blink-settings=preferredColorScheme=" + scheme.preferredColorScheme,
       ],
       { stdio: ["ignore", "pipe", "pipe"] }
     );
@@ -121,41 +133,50 @@ const server = await startServer();
 const url = "http://127.0.0.1:" + server.address().port + "/";
 console.log("\nAccessibility audit (" + INDEX.replace(ROOT + sep, "") + ")\n");
 
-let report;
+const scores = [];
 try {
-  report = await runLighthouse(url);
-} catch (e) {
-  console.error("  ERROR  " + e.message + "\n");
-  process.exit(1);
+  for (const scheme of SCHEMES) {
+    let report;
+    try {
+      report = await runLighthouse(url, scheme);
+    } catch (e) {
+      console.error("  ERROR  " + scheme.name + ": " + e.message + "\n");
+      process.exit(1);
+    }
+
+    if (report.runtimeError) {
+      console.error("  ERROR  " + scheme.name + ": " + report.runtimeError.message + "\n");
+      process.exit(1);
+    }
+
+    const score = Math.round((report.categories.accessibility.score ?? 0) * 100);
+    const audits = Object.values(report.audits);
+    const failures = audits.filter(
+      (a) => a.score !== null && a.score < 1 && a.scoreDisplayMode !== "informative"
+    );
+    const manual = audits.filter((a) => a.scoreDisplayMode === "manual").length;
+    scores.push({ scheme: scheme.name, score });
+
+    console.log(scheme.name + ":");
+    for (const a of failures) {
+      console.log("  FAIL  " + a.id + ": " + a.title);
+      const items = a.details?.items || [];
+      for (const item of items.slice(0, 5)) {
+        const sel = item.node?.selector || item.node?.snippet;
+        if (sel) console.log("          " + sel.replace(/\s+/g, " ").slice(0, 120));
+        const why = item.node?.explanation;
+        if (why) console.log("            " + why.replace(/\s+/g, " ").slice(0, 200));
+      }
+      if (items.length > 5) console.log("          ...and " + (items.length - 5) + " more");
+    }
+    console.log(
+      "  Score " + score + "/100 (threshold " + MIN_SCORE + "), " +
+      failures.length + " failing audit" + (failures.length === 1 ? "" : "s") +
+      ", " + manual + " needing manual review\n"
+    );
+  }
 } finally {
   server.close();
 }
 
-if (report.runtimeError) {
-  console.error("  ERROR  " + report.runtimeError.message + "\n");
-  process.exit(1);
-}
-
-const score = Math.round((report.categories.accessibility.score ?? 0) * 100);
-const failures = Object.values(report.audits).filter(
-  (a) => a.score !== null && a.score < 1 && a.scoreDisplayMode !== "informative"
-);
-
-for (const a of failures) {
-  console.log("  FAIL  " + a.id + ": " + a.title);
-  const items = a.details?.items || [];
-  for (const item of items.slice(0, 5)) {
-    const sel = item.node?.selector || item.node?.snippet;
-    if (sel) console.log("          " + sel.replace(/\s+/g, " ").slice(0, 120));
-  }
-  if (items.length > 5) console.log("          ...and " + (items.length - 5) + " more");
-}
-
-const manual = Object.values(report.audits).filter((a) => a.scoreDisplayMode === "manual").length;
-console.log(
-  "\nScore " + score + "/100 (threshold " + MIN_SCORE + "), " +
-  failures.length + " failing audit" + (failures.length === 1 ? "" : "s") +
-  ", " + manual + " needing manual review\n"
-);
-
-process.exit(score < MIN_SCORE ? 1 : 0);
+process.exit(scores.some((s) => s.score < MIN_SCORE) ? 1 : 0);
