@@ -317,6 +317,38 @@ await test("Helium chromium_version.txt: rejects invalid formats", () => {
 
 console.log("\nIntegration tests (hitting real APIs)\n");
 
+const CHROME_URL =
+  "https://versionhistory.googleapis.com/v1/chrome/platforms/mac/channels/stable/versions/all/releases?filter=endtime=none&order_by=version%20desc";
+
+await test("Chrome: versionhistory has a pinnable mac stable release", async () => {
+  const r = await f(CHROME_URL);
+  const d = await r.json();
+  assert(Array.isArray(d.releases) && d.releases.length, "should have releases");
+  const rel = d.releases.find((x) => x.pinnable);
+  assert(rel, "should have a pinnable release");
+  assert(/^\d+\.\d+\.\d+\.\d+$/.test(rel.version), "version should be x.x.x.x, got " + rel.version);
+  const major = parseInt(rel.version, 10);
+  assert(major >= 100 && major <= 250, "major should be in Chromium range, got " + major);
+});
+
+await test("Chrome: versionhistory order_by=version desc sorts numerically", async () => {
+  const r = await f(CHROME_URL);
+  const d = await r.json();
+  const versions = d.releases.map((x) => x.version);
+  const parts = (v) => v.split(".").map(Number);
+  const sorted = [...versions].sort((a, b) => {
+    const x = parts(a), y = parts(b);
+    for (let i = 0; i < 4; i++) if (x[i] !== y[i]) return y[i] - x[i];
+    return 0;
+  });
+  // The fetcher takes the first pinnable release, so it only gets the newest
+  // one if the API really sorts numerically rather than lexically.
+  assert(
+    sorted.join(",") === versions.join(","),
+    "expected numeric descending order, got " + versions.join(", ")
+  );
+});
+
 await test("Edge: returns Stable product with releases", async () => {
   const r = await f("https://edgeupdates.microsoft.com/api/products");
   const data = await r.json();
