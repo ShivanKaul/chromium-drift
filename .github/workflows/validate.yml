@@ -17,6 +17,8 @@ jobs:
       - name: Validate ci-versions.json
         run: node test/validate-versions.js ci-versions.json
       - name: Run tests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node test/test.js
       - name: Accessibility audit
         run: node test/a11y.js

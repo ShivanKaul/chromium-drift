@@ -7,6 +7,15 @@
 
 const FETCH_TIMEOUT = 15000;
 
+const GH_HEADERS = {
+  "User-Agent": "chromium-drift/1.0",
+  "Accept": "application/vnd.github+json",
+  "X-GitHub-Api-Version": "2022-11-28",
+  ...(process.env.GITHUB_TOKEN
+    ? { Authorization: "Bearer " + process.env.GITHUB_TOKEN }
+    : {}),
+};
+
 async function f(url, opts = {}, timeout = FETCH_TIMEOUT) {
   const ac = new AbortController();
   const t = setTimeout(() => ac.abort(), timeout);
@@ -461,16 +470,14 @@ await test("Dia: Sparkle appcast has ZIP enclosure", async () => {
 });
 
 await test("Helium: helium-linux releases/latest has tag_name", async () => {
-  const ghHeaders = { "User-Agent": "chromium-drift/1.0", "Accept": "application/vnd.github+json" };
-  const r = await f("https://api.github.com/repos/imputnet/helium-linux/releases/latest", { headers: ghHeaders });
+  const r = await f("https://api.github.com/repos/imputnet/helium-linux/releases/latest", { headers: GH_HEADERS });
   const release = await r.json();
   assert(release.tag_name, "should have tag_name");
   assert(/^\d+\.\d+/.test(release.tag_name), "tag should look like a version, got " + release.tag_name);
 });
 
 await test("Helium: linux tag + submodule → chromium_version.txt", async () => {
-  const ghHeaders = { "User-Agent": "chromium-drift/1.0", "Accept": "application/vnd.github+json" };
-  const relR = await f("https://api.github.com/repos/imputnet/helium-linux/releases/latest", { headers: ghHeaders });
+  const relR = await f("https://api.github.com/repos/imputnet/helium-linux/releases/latest", { headers: GH_HEADERS });
   const release = await relR.json();
   const tag = release.tag_name;
   assert(tag, "need tag_name");
@@ -478,7 +485,7 @@ await test("Helium: linux tag + submodule → chromium_version.txt", async () =>
   const contentUrl =
     "https://api.github.com/repos/imputnet/helium-linux/contents/helium-chromium?ref=" +
     encodeURIComponent(tag);
-  const contentR = await f(contentUrl, { headers: ghHeaders });
+  const contentR = await f(contentUrl, { headers: GH_HEADERS });
   const contentData = await contentR.json();
   const submoduleSha = contentData.sha;
   assert(submoduleSha && /^[0-9a-f]{40}$/.test(submoduleSha), "submodule sha should be 40 hex chars");

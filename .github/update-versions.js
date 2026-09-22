@@ -19,6 +19,15 @@ const FETCH_TIMEOUT = 15_000;
 const DOWNLOAD_TIMEOUT = 120_000;
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36";
 
+const GH_HEADERS = {
+  "User-Agent": "chromium-drift/1.0",
+  "Accept": "application/vnd.github+json",
+  "X-GitHub-Api-Version": "2022-11-28",
+  ...(process.env.GITHUB_TOKEN
+    ? { Authorization: "Bearer " + process.env.GITHUB_TOKEN }
+    : {}),
+};
+
 // Use 7zz (from 7zip package) if available, fall back to 7z (from p7zip-full).
 // Ubuntu 22.04+ ships 7zz, which is more robust at extracting the .deb and
 // ZIP archives we download.
@@ -286,11 +295,7 @@ async function detectDia() {
 
 async function detectHelium() {
   console.log("[Helium] Fetching latest helium-linux GitHub release...");
-  const ghHeaders = {
-    "User-Agent": "chromium-drift/1.0",
-    "Accept": "application/vnd.github+json",
-  };
-  const r = await f("https://api.github.com/repos/imputnet/helium-linux/releases/latest", { headers: ghHeaders });
+  const r = await f("https://api.github.com/repos/imputnet/helium-linux/releases/latest", { headers: GH_HEADERS });
   const release = await r.json();
   const tag = release.tag_name;
   if (!tag) throw new Error("no tag_name in helium-linux release");
@@ -299,7 +304,7 @@ async function detectHelium() {
   const contentUrl =
     "https://api.github.com/repos/imputnet/helium-linux/contents/helium-chromium?ref=" +
     encodeURIComponent(tag);
-  const contentR = await f(contentUrl, { headers: ghHeaders });
+  const contentR = await f(contentUrl, { headers: GH_HEADERS });
   const contentData = await contentR.json();
   const submoduleSha = contentData.sha;
   if (!submoduleSha || !/^[0-9a-f]{40}$/.test(submoduleSha)) {

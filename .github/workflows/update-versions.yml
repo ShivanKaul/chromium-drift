@@ -25,6 +25,8 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq 7zip
 
       - name: Detect versions and update ci-versions.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node .github/update-versions.js
 
       - name: Validate ci-versions.json
