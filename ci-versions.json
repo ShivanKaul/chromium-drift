@@ -1,15 +1,15 @@
 {
   "opera": {
     "chromiumMajor": 152,
-    "lastUpdated": "2026-09-17",
+    "lastUpdated": "2026-09-24",
     "source": "extracted from Linux .deb binary",
-    "chromiumVersion": "152.0.7977.120"
+    "chromiumVersion": "152.0.7977.130"
   },
   "vivaldi": {
     "chromiumMajor": 152,
-    "lastUpdated": "2026-09-18",
+    "lastUpdated": "2026-09-24",
     "source": "extracted from Linux .deb binary",
-    "chromiumVersion": "152.0.7977.137"
+    "chromiumVersion": "152.0.7977.144"
   },
   "dia": {
     "chromiumMajor": 153,
@@ -18,9 +18,9 @@
     "chromiumVersion": "153.0.8010.53"
   },
   "helium": {
-    "chromiumMajor": 153,
-    "lastUpdated": "2026-09-19",
+    "chromiumMajor": 154,
+    "lastUpdated": "2026-09-24",
     "source": "extracted from helium-linux release tag via helium-chromium/chromium_version.txt",
-    "chromiumVersion": "153.0.8010.52"
+    "chromiumVersion": "154.0.8037.57"
   }
 }
