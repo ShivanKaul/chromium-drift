@@ -12,10 +12,10 @@
     "chromiumVersion": "152.0.7977.144"
   },
   "dia": {
-    "chromiumMajor": 153,
-    "lastUpdated": "2026-09-19",
+    "chromiumMajor": 154,
+    "lastUpdated": "2026-09-25",
     "source": "extracted from macOS ZIP binary",
-    "chromiumVersion": "153.0.8010.53"
+    "chromiumVersion": "154.0.8037.58"
   },
   "helium": {
     "chromiumMajor": 154,
