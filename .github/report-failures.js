@@ -51,17 +51,24 @@ if (!existsSync(failuresPath)) {
 }
 const failures = JSON.parse(readFileSync(failuresPath, "utf8"));
 
-// Ensure the label exists; ignore the 422 we get when it already does.
-try {
-  await api("/repos/" + repo + "/labels", {
-    method: "POST",
-    body: JSON.stringify({
-      name: LABEL,
-      color: "b60205",
-      description: "An upstream version fetcher is failing",
-    }),
-  });
-} catch (_) {}
+const ciFailuresPath = new URL("../ci-fetcher-failures.json", import.meta.url).pathname;
+if (!existsSync(ciFailuresPath)) {
+  console.error("ci-fetcher-failures.json missing; update-versions step did not complete");
+  process.exit(1);
+}
+const ciFailures = JSON.parse(readFileSync(ciFailuresPath, "utf8"));
+const ciKeys = new Set(ciFailures.map((f) => f.key));
+failures.push(...ciFailures);
+
+// Ensure the labels exist; ignore the 422 we get when they already do.
+for (const label of [
+  { name: LABEL, color: "b60205", description: "An upstream version fetcher is failing" },
+  { name: "accept-regression", color: "0e8a16", description: "Confirmed upstream downgrade; accept it as the new baseline" },
+]) {
+  try {
+    await api("/repos/" + repo + "/labels", { method: "POST", body: JSON.stringify(label) });
+  } catch (_) {}
+}
 
 const openIssues = await api(
   "/repos/" + repo + "/issues?state=open&labels=" + LABEL + "&per_page=100"
@@ -86,15 +93,25 @@ for (const { key, name, message } of failures) {
     continue;
   }
 
-  const body =
-    name + " could not be resolved to a Chromium version, so its card on the " +
-    "dashboard is showing an error and today's snapshot has a null for `" + key + "`.\n\n" +
+  const isRegression = ciKeys.has(key) && message.includes("is older than current");
+
+  const body = (ciKeys.has(key)
+    ? name + " failed to update in ci-versions.json; the dashboard card is " +
+      "still showing the last known-good version.\n\n"
+    : name + " could not be resolved to a Chromium version, so its card on the " +
+      "dashboard is showing an error and today's snapshot has a null for `" + key + "`.\n\n"
+  ) +
     "```\n" + message + "\n```\n\n" +
     "First seen: " + today + "\n" +
     (runUrl ? "Workflow run: " + runUrl + "\n" : "") +
-    "\nThe fetcher lives in `lib/fetchers.js`. This issue closes automatically " +
-    "once the fetcher succeeds again.\n\n" +
-    marker;
+    "\nThe fetcher lives in `" + (ciKeys.has(key) ? ".github/update-versions.js" : "lib/fetchers.js") +
+    "`. This issue closes automatically once the fetcher succeeds again.\n" +
+    (isRegression
+      ? "\nIf this is a confirmed upstream downgrade rather than a detection bug, " +
+        "add the `accept-regression` label to this issue; the next run will accept " +
+        "it as the new baseline.\n"
+      : "") +
+    "\n" + marker;
 
   const issue = await api("/repos/" + repo + "/issues", {
     method: "POST",

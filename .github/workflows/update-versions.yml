@@ -24,7 +24,15 @@ jobs:
       - name: Install 7zip (for .deb and Dia ZIP extraction)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq 7zip
 
+      - name: Check for accept-regression labels
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node .github/read-overrides.js
+
       - name: Detect versions and update ci-versions.json
+        id: detect
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node .github/update-versions.js
@@ -55,7 +63,7 @@ jobs:
         run: node .github/report-failures.js
 
       - name: Fail if a fetcher failed
-        if: steps.snapshot.outcome == 'failure'
+        if: steps.detect.outcome == 'failure' || steps.snapshot.outcome == 'failure'
         run: |
-          echo "One or more fetchers failed; data was still committed. See snapshot log above."
+          echo "One or more fetchers failed; data was still committed. See logs above."
           exit 1

@@ -1,3 +1,5 @@
 .wrangler
 .claude/
 fetcher-failures.json
+ci-fetcher-failures.json
+accepted-regressions.json

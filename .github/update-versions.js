@@ -10,7 +10,7 @@
 // Requires: Node 20+, p7zip-full (for .deb and Dia ZIP extraction)
 // Usage:    node update-versions.js
 
-import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, existsSync } from "node:fs";
 import { execSync, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -335,11 +335,16 @@ const browsers = [
 ];
 
 const jsonPath = new URL("../ci-versions.json", import.meta.url).pathname;
+const failuresPath = new URL("../ci-fetcher-failures.json", import.meta.url).pathname;
+const overridesPath = new URL("../accepted-regressions.json", import.meta.url).pathname;
 const data = JSON.parse(readFileSync(jsonPath, "utf8"));
+const overrides = new Set(
+  existsSync(overridesPath) ? JSON.parse(readFileSync(overridesPath, "utf8")) : []
+);
 const today = new Date().toISOString().slice(0, 10);
 
 let changed = false;
-let failures = 0;
+const failures = [];
 
 for (const { key, name, detect, source } of browsers) {
   try {
@@ -357,11 +362,14 @@ for (const { key, name, detect, source } of browsers) {
       const regressed = prev.chromiumVersion && result.chromiumVersion
         ? versionCompare(result.chromiumVersion, prev.chromiumVersion) < 0
         : result.chromiumMajor < prev.chromiumMajor;
-      if (regressed) {
+      if (regressed && !overrides.has(key)) {
         throw new Error(
           "detected Chromium " + (result.chromiumVersion || result.chromiumMajor) +
           " is older than current " + (prev.chromiumVersion || prev.chromiumMajor)
         );
+      }
+      if (regressed) {
+        console.log("[" + name + "] Regression accepted via accept-regression label");
       }
     }
     const entry = { chromiumMajor: result.chromiumMajor, lastUpdated: today, source };
@@ -379,7 +387,7 @@ for (const { key, name, detect, source } of browsers) {
     if (e.stderr) console.error("  stderr: " + e.stderr.toString().trim());
     if (e.stdout) console.error("  stdout: " + e.stdout.toString().trim());
     console.error("");
-    failures++;
+    failures.push({ key, name, message: e.message });
   }
 }
 
@@ -390,7 +398,9 @@ if (changed) {
   console.log("No changes to ci-versions.json");
 }
 
-if (failures) {
-  console.error(failures + " browser(s) failed");
+writeFileSync(failuresPath, JSON.stringify(failures) + "\n");
+
+if (failures.length) {
+  console.error(failures.length + " browser(s) failed");
   process.exit(1);
 }
