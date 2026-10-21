@@ -7,10 +7,10 @@
 //   Dia      -- download macOS ZIP via Sparkle appcast, run strings on binary
 //   Helium   -- helium-linux release tag → helium-chromium submodule → chromium_version.txt
 //
-// Requires: Node 20+, p7zip-full (for .deb and Dia ZIP extraction)
+// Requires: Node 20+, p7zip-full (for .deb extraction), unzip (for Dia ZIP)
 // Usage:    node update-versions.js
 
-import { readFileSync, writeFileSync, mkdtempSync, rmSync, readdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync } from "node:fs";
 import { execSync, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -29,8 +29,8 @@ const GH_HEADERS = {
 };
 
 // Use 7zz (from 7zip package) if available, fall back to 7z (from p7zip-full).
-// Ubuntu 22.04+ ships 7zz, which is more robust at extracting the .deb and
-// ZIP archives we download.
+// Ubuntu 22.04+ ships 7zz, which is more robust at extracting the .deb
+// archives we download.
 let SZ;
 try { execSync("7zz --help", { stdio: "ignore" }); SZ = "7zz"; }
 catch { SZ = "7z"; }
@@ -247,28 +247,31 @@ async function detectDia() {
   console.log("  Downloaded " + (buf.length / 1024 / 1024).toFixed(1) + " MB");
 
   try {
-    // Extract with 7z
-    const extractDir = join(tmp, "extracted");
-    execSync(`${SZ} x -o"${extractDir}" "${zipPath}" -y 2>&1`, {
-      timeout: 120_000,
-    });
+    // Don't extract the ZIP: framework bundles are full of symlinks, which
+    // 7-Zip 25+ refuses to extract and unzip would create unchecked. Instead,
+    // list the entries and stream each framework binary straight to strings.
+    const list = spawnSync("unzip", ["-Z1", zipPath], { encoding: "utf8", timeout: 60_000, maxBuffer: 50 * 1024 * 1024 });
+    if (list.status !== 0) throw new Error("unzip -Z1 failed: " + (list.stderr || "").trim());
 
     // The real Chrome version is in a framework binary, not the main
     // executable (which contains stale Chrome/ strings). Dia uses
-    // ArcCore.framework. Check each .framework for Chrome/ strings and
-    // pick the highest valid Chromium version (third component > 1000).
-    const fwDir = join(extractDir, "Dia.app", "Contents", "Frameworks");
-    const fwEntries = readdirSync(fwDir).filter(e => e.endsWith(".framework"));
+    // ArcCore.framework. Check each framework's versioned binary
+    // (<Name>.framework/Versions/A/<Name>) for Chrome/ strings and pick the
+    // highest valid Chromium version (third component > 1000). The strict
+    // charset also keeps unzip from treating entry names as wildcards.
+    const fwEntries = list.stdout.split("\n").filter(e =>
+      /^Dia\.app\/Contents\/Frameworks\/([\w.-]+)\.framework\/Versions\/[\w.-]+\/\1$/.test(e)
+    );
     if (!fwEntries.length) throw new Error("No frameworks found in app bundle");
 
     let ver;
-    for (const fw of fwEntries) {
-      if (!/^[\w.-]+\.framework$/.test(fw)) continue;
-      const fwName = fw.replace(".framework", "");
-      const binaryPath = join(fwDir, fw, fwName);
-      try { readFileSync(binaryPath, { flag: "r" }); } catch { continue; }
-      console.log("  Checking: " + fw);
-      const result = spawnSync("strings", [binaryPath], { encoding: "utf8", timeout: 60_000, maxBuffer: 50 * 1024 * 1024 });
+    for (const entry of fwEntries) {
+      console.log("  Checking: " + entry.split("/")[3]);
+      const result = spawnSync(
+        "sh",
+        ["-c", 'unzip -p "$1" "$2" | strings | grep -oE "Chrome/[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+"', "sh", zipPath, entry],
+        { encoding: "utf8", timeout: 120_000, maxBuffer: 50 * 1024 * 1024 }
+      );
       if (result.status !== 0) continue;
       const matches = result.stdout.match(/Chrome\/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/g);
       if (!matches) continue;
