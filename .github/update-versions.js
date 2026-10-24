@@ -4,7 +4,7 @@
 // Browsers handled:
 //   Opera    -- download .deb, run strings on binary
 //   Vivaldi  -- download .deb, run strings on binary
-//   Dia      -- download macOS ZIP via Sparkle appcast, run strings on binary
+//   Dia      -- download macOS ZIP via Sparkle appcast, read framework Info.plist
 //   Helium   -- helium-linux release tag → helium-chromium submodule → chromium_version.txt
 //
 // Requires: Node 20+, p7zip-full (for .deb extraction), unzip (for Dia ZIP)
@@ -249,46 +249,36 @@ async function detectDia() {
   try {
     // Don't extract the ZIP: framework bundles are full of symlinks, which
     // 7-Zip 25+ refuses to extract and unzip would create unchecked. Instead,
-    // list the entries and stream each framework binary straight to strings.
+    // list the entries and stream the files we need straight out of the ZIP.
     const list = spawnSync("unzip", ["-Z1", zipPath], { encoding: "utf8", timeout: 60_000, maxBuffer: 50 * 1024 * 1024 });
     if (list.status !== 0) throw new Error("unzip -Z1 failed: " + (list.stderr || "").trim());
 
-    // The real Chrome version is in a framework binary, not the main
-    // executable (which contains stale Chrome/ strings). Dia uses
-    // ArcCore.framework. Check each framework's versioned binary
-    // (<Name>.framework/Versions/A/<Name>) for Chrome/ strings and pick the
-    // highest valid Chromium version (third component > 1000). The strict
-    // charset also keeps unzip from treating entry names as wildcards.
-    const fwEntries = list.stdout.split("\n").filter(e =>
-      /^Dia\.app\/Contents\/Frameworks\/([\w.-]+)\.framework\/Versions\/[\w.-]+\/\1$/.test(e)
+    // Dia's Chromium lives in ArcCore.framework, whose Info.plist carries the
+    // Chromium version as CFBundleShortVersionString. (Its binary no longer
+    // embeds a full Chrome/X.X.X.X UA string as of Dia 1.54.) Read every
+    // framework's plist and keep the highest Chromium-looking version (major
+    // >= 100, third component > 1000), which skips Sparkle, Sentry, etc. The
+    // strict charset also keeps unzip from treating entry names as wildcards.
+    const plistEntries = list.stdout.split("\n").filter(e =>
+      /^Dia\.app\/Contents\/Frameworks\/[\w.-]+\.framework\/Versions\/[\w.-]+\/Resources\/Info\.plist$/.test(e)
     );
-    if (!fwEntries.length) throw new Error("No frameworks found in app bundle");
+    if (!plistEntries.length) throw new Error("No framework Info.plist found in app bundle");
 
     let ver;
-    for (const entry of fwEntries) {
+    for (const entry of plistEntries) {
       console.log("  Checking: " + entry.split("/")[3]);
-      const result = spawnSync(
-        "sh",
-        ["-c", 'unzip -p "$1" "$2" | strings | grep -oE "Chrome/[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+"', "sh", zipPath, entry],
-        { encoding: "utf8", timeout: 120_000, maxBuffer: 50 * 1024 * 1024 }
-      );
+      const result = spawnSync("unzip", ["-p", zipPath, entry], { encoding: "utf8", timeout: 60_000 });
       if (result.status !== 0) continue;
-      const matches = result.stdout.match(/Chrome\/[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/g);
-      if (!matches) continue;
-      const out = [...new Set(matches.map(m => m.replace("Chrome/", "")))].join("\n");
-      if (!out) continue;
-      const candidates = out.split("\n").filter((v) => {
-        const parts = v.split(".");
-        return parts.length === 4 &&
-          parseInt(parts[0], 10) >= 100 &&
-          parseInt(parts[2], 10) > 1000;
-      });
-      for (const c of candidates) {
-        if (!ver || versionCompare(c, ver) > 0) ver = c;
-      }
+      const c = result.stdout.match(
+        /<key>CFBundleShortVersionString<\/key>\s*<string>(\d+\.\d+\.\d+\.\d+)<\/string>/
+      )?.[1];
+      if (!c) continue;
+      const parts = c.split(".").map(Number);
+      if (parts[0] < 100 || parts[2] <= 1000) continue;
+      if (!ver || versionCompare(c, ver) > 0) ver = c;
     }
 
-    if (!ver) throw new Error("Chrome version not found in binary");
+    if (!ver) throw new Error("Chromium version not found in framework Info.plist");
     console.log("  Found: " + ver);
     return { chromiumVersion: ver, chromiumMajor: parseInt(ver, 10) };
   } finally {

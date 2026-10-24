@@ -49,7 +49,7 @@ Downloads the Opera Linux .deb package, extracts the `opera` binary, and uses `s
 
 ### Dia
 
-Fetches the Sparkle appcast at `releases.diabrowser.com/BoostBrowser-updates.xml` to find the latest ZIP URL, downloads the macOS ZIP, extracts the app binary using 7z, and runs `strings` to find the embedded `Chrome/X.X.X.X` UA string.
+Fetches the Sparkle appcast at `releases.diabrowser.com/BoostBrowser-updates.xml` to find the latest ZIP URL, downloads the macOS ZIP, and reads `CFBundleShortVersionString` from `ArcCore.framework`'s `Info.plist` (the Chromium framework) with `unzip -p`, without extracting the archive. Dia 1.54+ no longer embeds a full `Chrome/X.X.X.X` string in the binary.
 
 ### Helium
 
