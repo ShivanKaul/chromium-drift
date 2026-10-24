@@ -1,9 +1,9 @@
 // snapshot-versions.js -- Record a daily snapshot of all browser Chromium
 // versions into snapshots.ndjson.
 //
-// Fetches live browsers (Chrome, Edge, Brave, Comet, Arc) via the shared
-// fetcher library, and reads CI-detected browsers (Vivaldi, Opera, Dia)
-// from ci-versions.json.
+// Fetches live browsers (Chrome, Edge, Brave, Comet) via the shared
+// fetcher library, and reads CI-detected browsers (Vivaldi, Opera, Dia,
+// Helium) from ci-versions.json.
 //
 // Usage: node .github/snapshot-versions.js
 

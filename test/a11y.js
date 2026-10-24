@@ -29,7 +29,6 @@ const FIXTURE = [
   { browser: "Comet", chromiumVersion: "146.0.7601.12", chromiumMajor: 146, source: "stub" },
   { browser: "Opera Stable", chromiumVersion: "145.0.7492.88", chromiumMajor: 145, source: "stub" },
   { browser: "Edge Stable", chromiumVersion: "148.0.7823.35", chromiumMajor: 148, source: "stub" },
-  { browser: "Arc", chromiumVersion: "142.0.7205.10", chromiumMajor: 142, source: "stub" },
   { browser: "Dia", chromiumVersion: "147.0.7712.40", chromiumMajor: 147, source: "stub" },
   { browser: "Helium", chromiumVersion: null, chromiumMajor: null, source: null, error: "no version data available" },
 ];

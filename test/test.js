@@ -180,57 +180,6 @@ await test("Brave versions.json: finds release channel entry", () => {
   assert(found.dependencies.chrome === "147.0.7727.102", "should have chrome dep");
 });
 
-await test("Arc appcast: extracts Chromium version from description", () => {
-  const xml = `<rss><channel>
-    <item>
-      <sparkle:version>79514</sparkle:version>
-      <description><![CDATA[This update carries Arc forward to Chromium 147.0.7727.117, patching security vulnerabilities.]]></description>
-      <enclosure url="https://releases.arc.net/release/Arc-1.144.0-79514.zip"/>
-    </item>
-    <item>
-      <sparkle:version>79250</sparkle:version>
-      <description><![CDATA[This release takes Arc to Chromium 147.0.7727.102.]]></description>
-      <enclosure url="https://releases.arc.net/release/Arc-1.143.2-79250.zip"/>
-    </item>
-  </channel></rss>`;
-  const items = [...xml.matchAll(
-    /<item>[\s\S]*?<sparkle:version>(\d+)<\/sparkle:version>[\s\S]*?<\/item>/g
-  )];
-  assert(items.length === 2, "should find 2 items");
-  items.sort((a, b) => Number(b[1]) - Number(a[1]));
-  assert(items[0][1] === "79514", "should pick highest build");
-  const cm = items[0][0].match(/Chromium\s+(\d+\.\d+\.\d+\.\d+)/i);
-  assert(cm, "should find Chromium version in description");
-  assert(cm[1] === "147.0.7727.117", "should extract correct version");
-});
-
-await test("Arc appcast: falls back to older item when newest omits Chromium version", () => {
-  // Newest build has no Chromium version in its description; an older one does.
-  const xml = `<rss><channel>
-    <item>
-      <sparkle:version>79600</sparkle:version>
-      <description><![CDATA[This release improves stability and fixes bugs.]]></description>
-      <enclosure url="https://releases.arc.net/release/Arc-1.145.0-79600.zip"/>
-    </item>
-    <item>
-      <sparkle:version>79514</sparkle:version>
-      <description><![CDATA[This update carries Arc forward to Chromium 147.0.7727.117, patching security vulnerabilities.]]></description>
-      <enclosure url="https://releases.arc.net/release/Arc-1.144.0-79514.zip"/>
-    </item>
-  </channel></rss>`;
-  const items = [...xml.matchAll(
-    /<item>[\s\S]*?<sparkle:version>(\d+)<\/sparkle:version>[\s\S]*?<\/item>/g
-  )];
-  items.sort((a, b) => Number(b[1]) - Number(a[1]));
-  let cm = null;
-  for (const [item] of items) {
-    cm = item.match(/Chromium\s+(\d+\.\d+\.\d+\.\d+)/i);
-    if (cm) break;
-  }
-  assert(cm, "should find Chromium version in an older item");
-  assert(cm[1] === "147.0.7727.117", "should extract version from the fallback item");
-});
-
 // -- update-versions.js shell safety --
 
 await test("Framework name filter: rejects shell metacharacters", () => {
@@ -475,25 +424,6 @@ await test("Vivaldi: .deb Packages index has vivaldi-stable entry", async () => 
   assert(text.includes("Package: vivaldi-stable"), "should contain vivaldi-stable package");
   const m = text.match(/Filename:\s*(pool\/main\/[^\n]+\.deb)/);
   assert(m, "should have a .deb filename");
-});
-
-await test("Arc: Sparkle appcast has Chromium version in description", async () => {
-  const r = await f("https://releases.arc.net/updates.xml");
-  const xml = await r.text();
-  const items = [...xml.matchAll(
-    /<item>[\s\S]*?<sparkle:version>(\d+)<\/sparkle:version>[\s\S]*?<\/item>/g
-  )];
-  assert(items.length > 0, "should have at least one item");
-  items.sort((a, b) => Number(b[1]) - Number(a[1]));
-  // Some releases omit the Chromium version, so use the newest one that names it.
-  let cm = null;
-  for (const [item] of items) {
-    cm = item.match(/Chromium\s+(\d+\.\d+\.\d+\.\d+)/i);
-    if (cm) break;
-  }
-  assert(cm, "an item should mention Chromium version");
-  const major = parseInt(cm[1], 10);
-  assert(major >= 100 && major <= 250, "Chromium major should be in range, got " + major);
 });
 
 await test("Dia: Sparkle appcast has ZIP enclosure", async () => {

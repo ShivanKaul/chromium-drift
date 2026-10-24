@@ -14,9 +14,8 @@ https://chromium-drift.pages.dev
 4. Vivaldi Release
 5. Opera
 6. Perplexity Comet
-7. Arc
-8. Dia
-9. Helium
+7. Dia
+8. Helium
 
 ## Docs
 
