@@ -247,32 +247,14 @@ async function detectDia() {
   console.log("  Downloaded " + (buf.length / 1024 / 1024).toFixed(1) + " MB");
 
   try {
-    // Read entries in place; extracting would create the bundle's symlinks.
-    const list = spawnSync("unzip", ["-Z1", zipPath], { encoding: "utf8", timeout: 60_000, maxBuffer: 50 * 1024 * 1024 });
-    if (list.status !== 0) throw new Error("unzip -Z1 failed: " + (list.stderr || "").trim());
-
-    // ArcCore.framework's Info.plist has the Chromium version. [\w.-] keeps
-    // unzip from treating entry names as wildcards.
-    const plistEntries = list.stdout.split("\n").filter(e =>
-      /^Dia\.app\/Contents\/Frameworks\/[\w.-]+\.framework\/Versions\/[\w.-]+\/Resources\/Info\.plist$/.test(e)
-    );
-    if (!plistEntries.length) throw new Error("No framework Info.plist found in app bundle");
-
-    let ver;
-    for (const entry of plistEntries) {
-      console.log("  Checking: " + entry.split("/")[3]);
-      const result = spawnSync("unzip", ["-p", zipPath, entry], { encoding: "utf8", timeout: 60_000 });
-      if (result.status !== 0) continue;
-      const c = result.stdout.match(
-        /<key>CFBundleShortVersionString<\/key>\s*<string>(\d+\.\d+\.\d+\.\d+)<\/string>/
-      )?.[1];
-      if (!c) continue;
-      const parts = c.split(".").map(Number);
-      if (parts[0] < 100 || parts[2] <= 1000) continue;
-      if (!ver || versionCompare(c, ver) > 0) ver = c;
-    }
-
-    if (!ver) throw new Error("Chromium version not found in framework Info.plist");
+    // Read the plist in place; extracting would create the bundle's symlinks.
+    const plist = "Dia.app/Contents/Frameworks/ArcCore.framework/Versions/A/Resources/Info.plist";
+    const result = spawnSync("unzip", ["-p", zipPath, plist], { encoding: "utf8", timeout: 60_000 });
+    if (result.status !== 0) throw new Error("unzip -p " + plist + " failed: " + (result.stderr || "").trim());
+    const ver = result.stdout.match(
+      /<key>CFBundleShortVersionString<\/key>\s*<string>(\d+\.\d+\.\d+\.\d+)<\/string>/
+    )?.[1];
+    if (!ver || parseInt(ver, 10) < 100) throw new Error("Chromium version not found in ArcCore Info.plist");
     console.log("  Found: " + ver);
     return { chromiumVersion: ver, chromiumMajor: parseInt(ver, 10) };
   } finally {

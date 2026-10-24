@@ -295,20 +295,10 @@ await test("Dia appcast: extracts ZIP URL from highest build", () => {
   assert(items[0][2] === "https://releases.diabrowser.com/release/Dia-1.28.0-79513.zip", "should pick highest build ZIP");
 });
 
-await test("Dia framework Info.plist: picks Chromium version, skips other frameworks", () => {
-  const plists = [
-    `<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>2.6.4</string>\n</dict>`,
-    `<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>8.36.0.0</string>\n</dict>`,
-    `<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>156.0.8078.48</string>\n\t<key>CFBundleVersion</key>\n\t<string>8078.48</string>\n</dict>`,
-  ];
-  const versions = plists
-    .map((p) => p.match(/<key>CFBundleShortVersionString<\/key>\s*<string>(\d+\.\d+\.\d+\.\d+)<\/string>/)?.[1])
-    .filter((c) => {
-      if (!c) return false;
-      const parts = c.split(".").map(Number);
-      return parts[0] >= 100 && parts[2] > 1000;
-    });
-  assert(versions.length === 1 && versions[0] === "156.0.8078.48", "should only pick 156.0.8078.48");
+await test("Dia ArcCore Info.plist: parses CFBundleShortVersionString", () => {
+  const plist = `<dict>\n\t<key>CFBundleShortVersionString</key>\n\t<string>156.0.8078.48</string>\n\t<key>CFBundleVersion</key>\n\t<string>8078.48</string>\n</dict>`;
+  const ver = plist.match(/<key>CFBundleShortVersionString<\/key>\s*<string>(\d+\.\d+\.\d+\.\d+)<\/string>/)?.[1];
+  assert(ver === "156.0.8078.48", "should parse 156.0.8078.48, got " + ver);
 });
 
 await test("Helium chromium_version.txt: parses valid version", () => {
