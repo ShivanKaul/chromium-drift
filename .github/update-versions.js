@@ -4,10 +4,10 @@
 // Browsers handled:
 //   Opera    -- download .deb, run strings on binary
 //   Vivaldi  -- download .deb, run strings on binary
-//   Dia      -- download macOS ZIP via Sparkle appcast, read framework Info.plist
+//   Dia      -- download macOS ZIP via Sparkle appcast, read ArcCore Info.plist
 //   Helium   -- helium-linux release tag → helium-chromium submodule → chromium_version.txt
 //
-// Requires: Node 20+, p7zip-full (for .deb extraction), unzip (for Dia ZIP)
+// Requires: Node 20+, p7zip-full, unzip
 // Usage:    node update-versions.js
 
 import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync } from "node:fs";
@@ -28,9 +28,7 @@ const GH_HEADERS = {
     : {}),
 };
 
-// Use 7zz (from 7zip package) if available, fall back to 7z (from p7zip-full).
-// Ubuntu 22.04+ ships 7zz, which is more robust at extracting the .deb
-// archives we download.
+// Prefer 7zz (7zip package) over 7z (p7zip-full).
 let SZ;
 try { execSync("7zz --help", { stdio: "ignore" }); SZ = "7zz"; }
 catch { SZ = "7z"; }
@@ -247,7 +245,7 @@ async function detectDia() {
   console.log("  Downloaded " + (buf.length / 1024 / 1024).toFixed(1) + " MB");
 
   try {
-    // Read the plist in place; extracting would create the bundle's symlinks.
+    // Don't extract: the bundle's symlinks are unsafe to create.
     const plist = "Dia.app/Contents/Frameworks/ArcCore.framework/Versions/A/Resources/Info.plist";
     const result = spawnSync("unzip", ["-p", zipPath, plist], { encoding: "utf8", timeout: 60_000 });
     if (result.status !== 0) throw new Error("unzip -p " + plist + " failed: " + (result.stderr || "").trim());
@@ -299,7 +297,7 @@ async function detectHelium() {
 const browsers = [
   { key: "opera", name: "Opera Stable", detect: detectOpera, source: "extracted from Linux .deb binary" },
   { key: "vivaldi", name: "Vivaldi Stable", detect: detectVivaldi, source: "extracted from Linux .deb binary" },
-  { key: "dia", name: "Dia", detect: detectDia, source: "extracted from macOS ZIP binary" },
+  { key: "dia", name: "Dia", detect: detectDia, source: "extracted from macOS ZIP Info.plist" },
   { key: "helium", name: "Helium", detect: detectHelium, source: "extracted from helium-linux release tag via helium-chromium/chromium_version.txt" },
 ];
 

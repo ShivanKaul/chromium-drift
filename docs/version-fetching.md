@@ -37,7 +37,9 @@ Possible future fallback: the release-notes page is a Zendesk help center whose 
 
 ## CI-detected versions
 
-Chromium versions for these are extracted from local binaries. The CI is run daily via GitHub Actions via the [`update-versions.js`](https://github.com/ShivanKaul/chromium-drift/blob/main/.github/update-versions.js) script and the results are stored in `ci-versions.json`:
+Chromium versions for these are extracted from downloaded packages or release metadata. The CI is run daily via GitHub Actions via the [`update-versions.js`](https://github.com/ShivanKaul/chromium-drift/blob/main/.github/update-versions.js) script and the results are stored in `ci-versions.json`.
+
+If a detector fails, CI opens a `fetcher-down` issue and closes it on the next success. A version older than the stored one is rejected as a likely detection bug, unless its `fetcher-down` issue is labeled `accept-regression`.
 
 ### Vivaldi Stable
 
@@ -49,7 +51,7 @@ Downloads the Opera Linux .deb package, extracts the `opera` binary, and uses `s
 
 ### Dia
 
-Fetches the Sparkle appcast at `releases.diabrowser.com/BoostBrowser-updates.xml` to find the latest ZIP URL, downloads the macOS ZIP, and reads `CFBundleShortVersionString` from `ArcCore.framework`'s `Info.plist` (the Chromium framework) with `unzip -p`, without extracting the archive. Dia 1.54+ no longer embeds a full `Chrome/X.X.X.X` string in the binary.
+Finds the latest macOS ZIP via the Sparkle appcast at `releases.diabrowser.com/BoostBrowser-updates.xml`, then reads `CFBundleShortVersionString` from `ArcCore.framework`'s `Info.plist` with `unzip -p` (no extraction).
 
 ### Helium
 
