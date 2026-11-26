@@ -1,9 +1,9 @@
 {
   "opera": {
-    "chromiumMajor": 157,
-    "lastUpdated": "2026-11-18",
+    "chromiumMajor": 158,
+    "lastUpdated": "2026-11-26",
     "source": "extracted from Linux .deb binary",
-    "chromiumVersion": "157.0.8103.79"
+    "chromiumVersion": "158.0.8127.37"
   },
   "vivaldi": {
     "chromiumMajor": 156,
